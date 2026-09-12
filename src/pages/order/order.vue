@@ -64,7 +64,7 @@
               <button class="action-btn recom" @click="handlePayOrder(item.id)">立即付款</button>
             </view>
             <view v-if="item.status === 2" class="action-box b-t">
-              <button class="action-btn">查看物流</button>
+              <button class="action-btn" @click.stop="handleShowOrderDetail(item.id)">查看物流</button>
               <button class="action-btn recom" @click="handleReceiveOrder(item.id)">
                 确认收货
               </button>

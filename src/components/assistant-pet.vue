@@ -4,6 +4,10 @@
       class="assistant-pet__trigger"
       :style="petStyle"
       role="button"
+      tabindex="0"
+      :aria-expanded="isOpen"
+      @keydown.enter.prevent="handlePetClick"
+      @keydown.space.prevent="handlePetClick"
       aria-label="打开智能客服，可拖动调整位置"
       @click.stop="handlePetClick"
       @pointerdown.stop.prevent="handlePointerStart"
@@ -27,7 +31,7 @@
       <view v-if="!isOpen && !isDragging" class="assistant-pet__hint">需要帮忙吗？</view>
     </view>
 
-    <view v-if="isOpen" class="assistant-pet__panel" :style="panelStyle" @click.stop>
+    <view v-if="isOpen" class="assistant-pet__panel" role="dialog" aria-label="Mall 智能客服" :style="panelStyle" @click.stop>
       <view class="assistant-pet__panel-header">
         <view class="assistant-pet__identity">
           <view class="assistant-pet__mini-sprite" :style="miniSpriteStyle"></view>
@@ -35,7 +39,7 @@
             <text class="assistant-pet__title">Mall 智能客服</text>
             <text class="assistant-pet__status">
               <text class="assistant-pet__status-dot"></text>
-              在线为你解答购物问题
+              {{ isSending ? '正在回复…' : fallback ? '基础问答 · 智能服务暂不可用' : '商城购物咨询' }}
             </text>
           </view>
         </view>
@@ -78,6 +82,12 @@
           <text>{{ errorMessage }}</text>
           <button class="assistant-pet__retry" @click="retryLastMessage">重试</button>
         </view>
+        <view v-if="orderHint" class="assistant-pet__message" aria-live="polite">{{ orderHint }}</view>
+        <button v-for="item in recentOrders" :key="item.id" class="assistant-order-card" @click="openOrder(item.id)">
+          <text>订单 {{ item.orderSn }}</text>
+          <text>{{ orderStatusNames[item.status] || '状态待确认' }} · ￥{{ item.payAmount }}</text>
+          <text>查看详情 ›</text>
+        </button>
       </scroll-view>
 
       <view v-if="showQuickQuestions" class="assistant-pet__quick-list">
@@ -91,15 +101,21 @@
         </button>
       </view>
 
+      <view class="assistant-pet__actions">
+        <button @click="openDestination('search')">搜索商品</button>
+        <button :disabled="loadingOrders" @click="loadRecentOrders">{{ loadingOrders ? '查询中…' : '查询我的订单' }}</button>
+        <button @click="openDestination('coupons')">查看优惠券</button>
+      </view>
+
       <view class="assistant-pet__composer">
         <input
           v-model="inputValue"
           class="assistant-pet__input"
           type="text"
-          maxlength="800"
+          :focus="inputFocused"
+          :maxlength="800"
           confirm-type="send"
           placeholder="输入你想咨询的问题"
-          :disabled="isSending"
           @confirm="sendMessage()"
         />
         <button class="assistant-pet__send" :disabled="isSending || !inputValue.trim()" @click="sendMessage()">
@@ -113,8 +129,10 @@
 
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { sendAssistantMessageAPI } from '@/apis/assistant'
-import type { AssistantHistoryMessage } from '@/types/assistant'
+import { useAssistantChat } from '@/composables/useAssistantChat'
+import { useMemberStore } from '@/stores/member'
+import { getOrderListAPI } from '@/apis/order'
+import type { OmsOrderDetail } from '@/types/order'
 
 type Point = {
   x: number
@@ -137,23 +155,19 @@ type PointerEventLike = {
   type?: string
   clientX?: number
   clientY?: number
+  pageX?: number
+  pageY?: number
   pointerId?: number
   touches?: TouchPointList
   changedTouches?: TouchPointList
   preventDefault?: () => void
 }
 
-type ChatMessage = AssistantHistoryMessage
-
 const STORAGE_KEY = 'mall-assistant-pet-position'
 const PET_WIDTH = 104
 const PET_HEIGHT = 112
 const PANEL_GAP = 14
 const SPRITE_FRAME_ROOT = '/static/assistant/frames'
-const DEFAULT_MESSAGE: ChatMessage = {
-  role: 'assistant',
-  content: '你好，我是 Mall 的智能客服。关于购物流程、配送、优惠券或售后问题，都可以问我。',
-}
 const quickQuestions = ['怎么搜索商品？', '如何申请退货？', '优惠券在哪里查看？']
 
 type SpriteState = 'idle' | 'waving' | 'running'
@@ -174,15 +188,63 @@ const isOpen = ref(false)
 const isPointerActive = ref(false)
 const isDragging = ref(false)
 const suppressClick = ref(false)
-const isSending = ref(false)
-const inputValue = ref('')
-const errorMessage = ref('')
-const lastFailedMessage = ref('')
+const { messages, inputValue, errorMessage, isSending, fallback, clearConversation: resetChat,
+  sendMessage, retryLastMessage, owner } = useAssistantChat()
+const member = useMemberStore()
+const inputFocused = ref(false)
+const recentOrders = ref<OmsOrderDetail[]>([])
+const orderHint = ref('')
+const loadingOrders = ref(false)
+const orderStatusNames = ['待付款', '待发货', '已发货', '已完成', '已关闭', '无效订单']
+let orderVersion = 0
+
+const resetOrders = () => {
+  orderVersion++
+  recentOrders.value = []
+  orderHint.value = ''
+  loadingOrders.value = false
+}
+watch(owner, resetOrders, { flush: 'sync' })
+const clearConversation = () => { resetChat(); resetOrders() }
+
+const requireLogin = () => {
+  if (member.hasLogin) return true
+  closePanel()
+  uni.navigateTo({ url: '/pages/public/login' })
+  return false
+}
+const openDestination = (destination: 'search' | 'coupons') => {
+  if (destination === 'coupons' && !requireLogin()) return
+  closePanel()
+  uni.navigateTo({ url: destination === 'search' ? '/pages/product/search' : '/pages/coupon/couponList' })
+}
+const openOrder = (id: number) => {
+  if (!requireLogin()) return
+  closePanel()
+  uni.navigateTo({ url: `/pages/order/orderDetail?orderId=${id}` })
+}
+const loadRecentOrders = async () => {
+  if (loadingOrders.value || !requireLogin()) return
+  const current = ++orderVersion
+  loadingOrders.value = true
+  orderHint.value = ''
+  recentOrders.value = []
+  try {
+    // 复用按登录身份授权的订单接口；订单数据不加入模型上下文或会话缓存。
+    const res = await getOrderListAPI({ status: -1, pageNum: 1, pageSize: 3 })
+    if (current !== orderVersion) return
+    recentOrders.value = res.data.list || []
+    orderHint.value = recentOrders.value.length ? '最近订单（来自商城实时查询）' : '当前账号暂无订单。'
+  } catch {
+    if (current === orderVersion) orderHint.value = '订单暂时无法查询，请稍后重试或前往“我的订单”。'
+  } finally {
+    if (current === orderVersion) loadingOrders.value = false
+  }
+}
 const scrollIntoView = ref('')
 const viewport = ref({ width: 375, height: 667 })
 const position = ref<Point>({ x: 250, y: 480 })
 const dragOffset = ref<Point>({ x: 0, y: 0 })
-const messages = ref<ChatMessage[]>([DEFAULT_MESSAGE])
 const spriteFrame = ref(0)
 const miniSpriteFrame = ref(0)
 const isMounted = ref(false)
@@ -222,7 +284,7 @@ const petStyle = computed(() => ({
 
 const panelStyle = computed(() => {
   const panelWidth = Math.min(360, Math.max(280, viewport.value.width - 24))
-  const panelHeight = Math.min(500, Math.max(380, viewport.value.height - 84))
+  const panelHeight = Math.max(180, Math.min(540, viewport.value.height - 24))
   let left = position.value.x + PET_WIDTH - panelWidth
   let top = position.value.y - panelHeight - PANEL_GAP
   if (top < 12) top = position.value.y + PET_HEIGHT + PANEL_GAP
@@ -232,6 +294,7 @@ const panelStyle = computed(() => {
     left: `${left}px`,
     top: `${top}px`,
     width: `${panelWidth}px`,
+    height: `${panelHeight}px`,
     maxHeight: `${panelHeight}px`,
   }
 })
@@ -246,7 +309,7 @@ const getPoint = (event: PointerEventLike): Point | null => {
 const getViewport = () => {
   // H5 使用浏览器视口；其他端由 uni-app 提供系统尺寸。
   if (typeof window !== 'undefined') {
-    return { width: window.innerWidth, height: window.innerHeight }
+    return { width: window.visualViewport?.width ?? window.innerWidth, height: window.visualViewport?.height ?? window.innerHeight }
   }
   const info = uni.getSystemInfoSync()
   return { width: info.windowWidth, height: info.windowHeight }
@@ -290,7 +353,6 @@ const handlePointerStart = (event: PointerEventLike) => {
   isPointerActive.value = true
   isDragging.value = false
   suppressClick.value = false
-  errorMessage.value = ''
   if (typeof window !== 'undefined') {
     window.addEventListener('pointermove', handlePointerMove as EventListener, { passive: false })
     window.addEventListener('pointerup', handlePointerEnd as EventListener)
@@ -353,68 +415,10 @@ const handlePointerEnd = () => {
 const handlePetClick = () => {
   if (suppressClick.value) return
   isOpen.value = !isOpen.value
-  errorMessage.value = ''
 }
 
 const closePanel = () => {
   isOpen.value = false
-  errorMessage.value = ''
-}
-
-const clearConversation = () => {
-  if (isSending.value) return
-  messages.value = [DEFAULT_MESSAGE]
-  inputValue.value = ''
-  errorMessage.value = ''
-  lastFailedMessage.value = ''
-}
-
-const buildHistory = (): AssistantHistoryMessage[] => messages.value.slice(-8).map((item) => ({
-  role: item.role,
-  content: item.content,
-}))
-
-const sendMessage = async (preset?: string) => {
-  if (isSending.value) return
-  const content = (preset ?? inputValue.value).trim()
-  if (!content) return
-  if (content.length > 800) {
-    errorMessage.value = '问题过长，请控制在 800 个字符以内。'
-    return
-  }
-
-  const history = buildHistory()
-  messages.value.push({ role: 'user', content })
-  inputValue.value = ''
-  errorMessage.value = ''
-  lastFailedMessage.value = content
-  isSending.value = true
-  await nextTick()
-  scrollIntoView.value = `assistant-message-${messages.value.length - 1}`
-
-  try {
-    const res = await sendAssistantMessageAPI({ message: content, history })
-    const reply = res.data?.reply?.trim()
-    if (!reply) throw new Error('客服返回为空')
-    messages.value.push({ role: 'assistant', content: reply })
-    lastFailedMessage.value = ''
-  } catch (error) {
-    console.error('发送客服消息失败', error)
-    errorMessage.value = '消息发送失败，请检查网络后重试。'
-  } finally {
-    isSending.value = false
-    await nextTick()
-    scrollIntoView.value = `assistant-message-${messages.value.length - 1}`
-  }
-}
-
-const retryLastMessage = () => {
-  if (!lastFailedMessage.value) return
-  const failed = lastFailedMessage.value
-  const last = messages.value[messages.value.length - 1]
-  if (last?.role === 'user' && last.content === failed) messages.value.pop()
-  errorMessage.value = ''
-  sendMessage(failed)
 }
 
 const handleResize = () => {
@@ -448,7 +452,7 @@ const stopMiniSpriteTimer = () => {
 
 const startMiniSpriteTimer = () => {
   stopMiniSpriteTimer()
-  if (!isMounted.value) return
+  if (!isMounted.value || !isOpen.value) return
   miniSpriteFrame.value = 0
   miniSpriteTimer = setInterval(() => {
     miniSpriteFrame.value = (miniSpriteFrame.value + 1) % SPRITE_CONFIG.idle.frames
@@ -466,8 +470,23 @@ const preloadSpriteFrames = () => {
 }
 
 watch(spriteState, restartSpriteTimer)
+watch(isOpen, async opened => {
+  inputFocused.value = false
+  startMiniSpriteTimer()
+  await nextTick()
+  inputFocused.value = opened
+  if (!opened && typeof document !== 'undefined') {
+    document.querySelector<HTMLElement>('.assistant-pet__trigger')?.focus()
+  }
+})
+const handleKeydown = (event: KeyboardEvent) => { if (event.key === 'Escape' && isOpen.value) closePanel() }
+const handleVisibility = () => {
+  if (document.hidden) { stopSpriteTimer(); stopMiniSpriteTimer() }
+  else { restartSpriteTimer(); startMiniSpriteTimer() }
+}
 
 watch(messages, async () => {
+  scrollIntoView.value = ''
   await nextTick()
   if (messages.value.length > 0) scrollIntoView.value = `assistant-message-${messages.value.length - 1}`
 }, { deep: true })
@@ -484,6 +503,11 @@ onMounted(() => {
     y: viewport.value.height - PET_HEIGHT - 150,
   })
   if (typeof window !== 'undefined') window.addEventListener('resize', handleResize)
+  if (typeof window !== 'undefined') {
+    window.visualViewport?.addEventListener('resize', handleResize)
+    window.addEventListener('keydown', handleKeydown)
+    document.addEventListener('visibilitychange', handleVisibility)
+  }
 })
 
 onBeforeUnmount(() => {
@@ -493,10 +517,35 @@ onBeforeUnmount(() => {
   stopMiniSpriteTimer()
   if (suppressClickTimer) clearTimeout(suppressClickTimer)
   if (typeof window !== 'undefined') window.removeEventListener('resize', handleResize)
+  if (typeof window !== 'undefined') {
+    window.visualViewport?.removeEventListener('resize', handleResize)
+    window.removeEventListener('keydown', handleKeydown)
+    document.removeEventListener('visibilitychange', handleVisibility)
+  }
 })
 </script>
 
 <style lang="scss">
+.assistant-pet__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 8px 12px;
+  flex-shrink: 0;
+  button { margin: 0; padding: 0 8px; font-size: 12px; color: #a62a51; background: #fff1f5; }
+}
+.assistant-order-card {
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+  margin: 8px 0;
+  padding: 8px 12px;
+  font-size: 12px;
+  line-height: 1.8;
+  background: #fff1f5;
+  color: #73364a;
+}
+.assistant-pet__trigger:focus-visible { outline: 2px solid #a62a51; border-radius: 12px; }
 .assistant-pet {
   position: fixed;
   z-index: 9999;
@@ -574,7 +623,7 @@ onBeforeUnmount(() => {
 
 .assistant-pet__panel {
   position: absolute;
-  z-index: 3;
+  z-index: 5;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -586,6 +635,7 @@ onBeforeUnmount(() => {
 }
 
 .assistant-pet__panel-header {
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -670,7 +720,7 @@ onBeforeUnmount(() => {
 
 .assistant-pet__messages {
   flex: 1;
-  min-height: 180px;
+  min-height: 0;
   padding: 14px 12px 8px;
   background: #fffafb;
 }
@@ -772,6 +822,7 @@ onBeforeUnmount(() => {
 }
 
 .assistant-pet__composer {
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   gap: 7px;
@@ -816,6 +867,7 @@ onBeforeUnmount(() => {
 }
 
 .assistant-pet__disclaimer {
+  flex-shrink: 0;
   display: block;
   padding: 0 12px 10px;
   color: #ad9ca2;

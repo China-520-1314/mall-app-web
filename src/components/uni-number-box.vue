@@ -63,31 +63,35 @@ watch(inputValue, (number) => {
 })
 
 const _calcValue = (type: 'subtract' | 'add') => {
+  if (props.disabled || (type === 'subtract' && minDisabled.value) ||
+      (type === 'add' && maxDisabled.value)) return
   const scale = _getDecimalScale()
-  let value = inputValue.value * scale
+  const value = inputValue.value * scale
+  const minimum = (props.min ?? -Infinity) * scale
+  const maximum = (props.max ?? Infinity) * scale
   let newValue = 0
   const step = (props.step || 1) * scale
 
   if (type === 'subtract') {
     newValue = value - step
-    if (newValue <= (props.min ?? -Infinity)) {
+    if (newValue <= minimum) {
       minDisabled.value = true
     }
-    if (newValue < (props.min ?? -Infinity)) {
-      newValue = props.min ?? -Infinity
+    if (newValue < minimum) {
+      newValue = minimum
     }
-    if (newValue < (props.max ?? Infinity) && maxDisabled.value === true) {
+    if (newValue < maximum && maxDisabled.value === true) {
       maxDisabled.value = false
     }
   } else if (type === 'add') {
     newValue = value + step
-    if (newValue >= (props.max ?? Infinity)) {
+    if (newValue >= maximum) {
       maxDisabled.value = true
     }
-    if (newValue > (props.max ?? Infinity)) {
-      newValue = props.max ?? Infinity
+    if (newValue > maximum) {
+      newValue = maximum
     }
-    if (newValue > (props.min ?? -Infinity) && minDisabled.value === true) {
+    if (newValue > minimum && minDisabled.value === true) {
       minDisabled.value = false
     }
   }
@@ -103,24 +107,24 @@ const _getDecimalScale = () => {
   const step = props.step || 1
   // 浮点型
   if (~~step !== step) {
-    scale = Math.pow(10, (step + '').split('.')[1].length)
+    const [mantissa, exponent = '0'] = String(step).split('e')
+    scale = Math.pow(10, Math.max(0, (mantissa.split('.')[1]?.length ?? 0) - Number(exponent)))
   }
   return scale
 }
 
 const _onBlur = (event: { detail: { value: string } }) => {
-  let value = event.detail.value
-  if (!value) {
-    inputValue.value = 0
-    return
-  }
-  value = +value
+  if (props.disabled) return
+  let value = Number(event.detail.value)
+  if (!Number.isFinite(value)) value = props.min ?? 0
   if (value > (props.max ?? Infinity)) {
     value = props.max ?? Infinity
   } else if (value < (props.min ?? -Infinity)) {
     value = props.min ?? -Infinity
   }
   inputValue.value = value
+  minDisabled.value = !!props.isMin || value <= (props.min ?? -Infinity)
+  maxDisabled.value = !!props.isMax || value >= (props.max ?? Infinity)
 }
 </script>
 

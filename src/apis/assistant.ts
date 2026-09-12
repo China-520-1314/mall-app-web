@@ -7,6 +7,7 @@ export const sendAssistantMessageAPI = (data: AssistantChatRequest) => {
     method: 'POST',
     url: '/assistant/chat',
     data,
+    silent: true,
     // 词元神生成回复可能接近后端 30 秒的请求上限，避免被通用 10 秒超时提前中断。
     timeout: 35 * 1000,
   })

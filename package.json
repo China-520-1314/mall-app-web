@@ -6,6 +6,8 @@
     "url": "https://www.macrozheng.com/"
   },
   "scripts": {
+    "test:number-box": "node --test scripts/test-number-box.cjs",
+    "test:assistant": "node --test scripts/test-assistant-session.cjs",
     "dev:app": "uni -p app",
     "dev:app-android": "uni -p app-android",
     "dev:app-ios": "uni -p app-ios",

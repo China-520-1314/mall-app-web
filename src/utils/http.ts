@@ -61,6 +61,8 @@ const buildQueryString = (params: Record<string, any>): string => {
  * 扩展的请求选项类型
  */
 export interface HttpRequestOptions extends UniApp.RequestOptions {
+  /** 由调用方展示错误，避免重复弹窗 */
+  silent?: boolean
   /** 查询参数（会自动拼接到 URL 后面） */
   params?: Record<string, any>
 }
@@ -89,9 +91,11 @@ export const http = <T>(options: HttpRequestOptions): Promise<CommonResult<T>> =
     delete options.params
   }
 
+  const { silent = false, ...requestOptions } = options
   return new Promise<CommonResult<T>>((resolve, reject) => {
     uni.request({
-      ...options,
+      ...requestOptions,
+      url: options.url,
       // 响应成功
       success(res) {
         // 状态码 2xx，参考 axios 的设计
@@ -108,14 +112,14 @@ export const http = <T>(options: HttpRequestOptions): Promise<CommonResult<T>> =
             reject(res)
           } else {
             // 其他错误 -> 根据后端错误信息轻提示
-            uni.showToast({
+            if (!silent) uni.showToast({
               icon: 'none',
               title: data.message || '请求错误',
             })
             reject(res)
           }
         } else {
-          uni.showToast({
+          if (!silent) uni.showToast({
             icon: 'none',
             title: (res.data as CommonResult<T>).message || '请求错误',
           })
@@ -124,7 +128,7 @@ export const http = <T>(options: HttpRequestOptions): Promise<CommonResult<T>> =
       },
       // 响应失败
       fail(err) {
-        uni.showToast({
+        if (!silent) uni.showToast({
           icon: 'none',
           title: '网络错误，换个网络试试',
         })
