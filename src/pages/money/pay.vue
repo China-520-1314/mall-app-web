@@ -74,28 +74,29 @@ const handleChangePayType = (type: number) => {
 
 // 确认支付
 const handleConfirmPay = async () => {
-  // #ifdef H5
-  if (USE_ALIPAY) {
-    if (payType.value != 1) {
-      uni.showToast({
-        title: '暂不支持微信支付！',
-        icon: 'none',
-      })
-      return
-    }
-    const apiBaseUrl = import.meta.env.VITE_API_BASE_URL
-    window.location.href =
-      apiBaseUrl +
-      '/alipay/webPay?outTradeNo=' +
-      orderInfo.value.orderSn +
-      '&subject=' +
-      orderInfo.value.receiverName +
-      '的商品订单' +
-      '&totalAmount=' +
-      orderInfo.value.totalAmount
-    return
-  }
-  // #endif
+  // ===== 原支付逻辑（H5端跳支付宝收银台），现改为点击后直接支付成功，原逻辑注释保留 =====
+  // // 条件编译：仅 H5 端生效
+  // if (USE_ALIPAY) {
+  //   if (payType.value != 1) {
+  //     uni.showToast({
+  //       title: '暂不支持微信支付！',
+  //       icon: 'none',
+  //     })
+  //     return
+  //   }
+  //   const apiBaseUrl = import.meta.env.VITE_API_BASE_URL
+  //   window.location.href =
+  //     apiBaseUrl +
+  //     '/alipay/webPay?outTradeNo=' +
+  //     orderInfo.value.orderSn +
+  //     '&subject=' +
+  //     orderInfo.value.receiverName +
+  //     '的商品订单' +
+  //     '&totalAmount=' +
+  //     orderInfo.value.totalAmount
+  //   return
+  // }
+  // ===== 原逻辑结束 =====
 
   try {
     await payOrderSuccessAPI({

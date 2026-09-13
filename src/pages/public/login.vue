@@ -9,8 +9,11 @@
       <view class="welcome">欢迎回来！</view>
       <view class="input-content">
         <view class="input-item">
-          <text class="tit">用户名</text>
-          <input type="text" v-model="username" placeholder="请输入用户名" :maxlength="11" />
+          <text class="tit">QQ邮箱账号</text>
+          <view class="qq-email-input">
+            <input type="number" v-model="qqNumber" placeholder="请输入QQ号" :maxlength="12" />
+            <text class="email-suffix">@qq.com</text>
+          </view>
         </view>
         <view class="input-item">
           <text class="tit">密码</text>
@@ -25,12 +28,8 @@
         </view>
       </view>
       <button class="confirm-btn" @click="toLogin" :disabled="logining"> 登录 </button>
-      <button class="confirm-btn2" @click="toRegist('qrcode')">获取体验账号</button>
-      <view class="forget-section" @click="toRegist('qrcode')">忘记密码?</view>
-    </view>
-    <view class="register-section">
-      还没有账号?
-      <text @click="toRegist('register')">马上注册</text>
+      <button class="confirm-btn2" @click="toRegist('register')">注册新账号</button>
+      <view class="forget-section" @click="toRegist('reset')">忘记密码？</view>
     </view>
   </view>
 </template>
@@ -42,27 +41,34 @@ import { useMemberStore } from '@/stores/member'
 // 获取会员store
 const memberStore = useMemberStore()
 
-// 登录用户名
-const username = ref(uni.getStorageSync('username') || '')
+// 登录页只输入 QQ 号，提交时自动补全邮箱后缀。
+const storedEmail = String(uni.getStorageSync('email') || '')
+const qqNumber = ref(storedEmail.replace(/@qq\.com$/i, '').replace(/\D/g, '').slice(0, 12))
 // 登录密码
-const password = ref(uni.getStorageSync('password') || '')
+const password = ref('')
 // 登录加载状态
 const logining = ref(false)
+const isValidQQNumber = (value: string) => /^[1-9][0-9]{4,11}$/.test(value.trim())
 
 // 登录处理
 const toLogin = async () => {
-  if (!username.value || !password.value) {
+  const normalizedQQ = qqNumber.value.trim()
+  if (!isValidQQNumber(normalizedQQ)) {
     uni.showToast({
-      title: '请输入用户名和密码',
+      title: '请输入正确的QQ号',
       icon: 'none',
     })
+    return
+  }
+  if (!password.value) {
+    uni.showToast({ title: '请输入密码', icon: 'none' })
     return
   }
 
   logining.value = true
 
   try {
-    await memberStore.memberLogin(username.value, password.value)
+    await memberStore.memberLogin(`${normalizedQQ}@qq.com`, password.value)
 
     uni.showToast({
       title: '登录成功',
@@ -79,7 +85,7 @@ const toLogin = async () => {
     }, 1000)
   } catch (error) {
     uni.showToast({
-      title: '登录失败，请检查账号密码',
+      title: '登录失败，请检查QQ邮箱和密码',
       icon: 'none',
     })
   } finally {
@@ -92,8 +98,8 @@ const navBack = () => {
   uni.navigateBack()
 }
 
-// 跳转到注册页
-const toRegist = (mode: 'register' | 'qrcode') => {
+// 跳转到注册或密码找回页
+const toRegist = (mode: 'register' | 'reset') => {
   uni.navigateTo({ url: `/pages/public/register?mode=${mode}` })
 }
 </script>
@@ -217,6 +223,25 @@ page {
   }
 }
 
+.qq-email-input {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  height: 60rpx;
+
+  input {
+    flex: 1;
+    min-width: 0;
+  }
+}
+
+.email-suffix {
+  flex-shrink: 0;
+  padding-left: 12rpx;
+  font-size: $font-base + 2rpx;
+  color: $font-color-dark;
+}
+
 .confirm-btn {
   width: 630rpx;
   height: 76rpx;
@@ -238,8 +263,9 @@ page {
   line-height: 76rpx;
   border-radius: 50px;
   margin-top: 40rpx;
-  background: $uni-color-primary;
-  color: #fff;
+  border: 1rpx solid $uni-color-primary;
+  background: #fff;
+  color: $uni-color-primary;
   font-size: $font-lg;
 
   &:after {
@@ -254,18 +280,4 @@ page {
   margin-top: 40rpx;
 }
 
-.register-section {
-  position: absolute;
-  left: 0;
-  bottom: 50rpx;
-  width: 100%;
-  font-size: $font-sm + 2rpx;
-  color: $font-color-base;
-  text-align: center;
-
-  text {
-    color: $font-color-spec;
-    margin-left: 10rpx;
-  }
-}
 </style>

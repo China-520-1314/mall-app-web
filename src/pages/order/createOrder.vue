@@ -146,7 +146,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { onLoad, onShow } from '@dcloudio/uni-app'
-import { generateConfirmOrderAPI, generateOrderAPI } from '@/apis/order'
+import { generateBuyNowConfirmOrderAPI, generateConfirmOrderAPI, generateOrderAPI } from '@/apis/order'
 import { formatDate } from '@/utils/date'
 import type { CartPromotionItem, CalcAmount, UmsIntegrationConsumeSetting } from '@/types/order'
 import type { SmsCoupon } from '@/types/coupon'
@@ -179,12 +179,21 @@ const integrationConsumeSetting = ref<UmsIntegrationConsumeSetting>(
 const memberIntegration = ref(0)
 // 购物车ID列表
 const cartIds = ref<number[]>([])
+const buyNowProductId = ref<number | null>(null)
+const buyNowSkuId = ref<number | null>(null)
+const buyNowQuantity = ref(1)
 
 // ===== 加载数据 =====
 // 生成确认单信息
 const loadData = async () => {
   try {
-    const res = await generateConfirmOrderAPI(cartIds.value)
+    const res = buyNowProductId.value && buyNowSkuId.value
+      ? await generateBuyNowConfirmOrderAPI({
+          buyNowProductId: buyNowProductId.value,
+          buyNowSkuId: buyNowSkuId.value,
+          buyNowQuantity: buyNowQuantity.value,
+        })
+      : await generateConfirmOrderAPI(cartIds.value)
     const data = res.data
     memberReceiveAddressList.value = data.memberReceiveAddressList || []
     currentAddress.value = getDefaultAddress()
@@ -229,7 +238,12 @@ defineExpose({
 
 // 页面加载时执行
 onLoad((option) => {
-  if (option?.cartIds) {
+  if (option?.buyNowProductId && option?.buyNowSkuId) {
+    buyNowProductId.value = Number(option.buyNowProductId)
+    buyNowSkuId.value = Number(option.buyNowSkuId)
+    buyNowQuantity.value = Math.max(1, Number(option.buyNowQuantity || 1))
+    loadData()
+  } else if (option?.cartIds) {
     cartIds.value = JSON.parse(option.cartIds)
     loadData()
   }
@@ -257,6 +271,9 @@ const handleSubmit = async () => {
     cartIds: cartIds.value.map(Number),
     memberReceiveAddressId: currentAddress.value?.id as number | undefined,
     useIntegration: useIntegration.value,
+    buyNowProductId: buyNowProductId.value || undefined,
+    buyNowSkuId: buyNowSkuId.value || undefined,
+    buyNowQuantity: buyNowProductId.value ? buyNowQuantity.value : undefined,
   }
   if (currCoupon.value != null) {
     orderParam.couponId = currCoupon.value.id

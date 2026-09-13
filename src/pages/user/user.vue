@@ -8,12 +8,13 @@
         <text class="yticon icon-icon-- nav-btn" @click="handleNavToNotice"></text>
       </view>
       <!-- #endif -->
-      <view class="user-info-box">
+      <view class="user-info-box" @click="handleLogin">
         <view class="portrait-box">
           <image class="portrait" :src="memberInfo?.icon || '/static/missing-face.png'"></image>
         </view>
         <view class="info-box">
-          <text class="username">{{ memberInfo?.nickname || memberInfo?.username || '游客' }}</text>
+          <text class="username">{{ memberInfo?.nickname || memberInfo?.username || '未登录' }}</text>
+          <text v-if="!hasLogin" class="login-hint">点击登录</text>
         </view>
       </view>
       <view class="vip-card-box">
@@ -80,7 +81,12 @@
           <text class="yticon icon-yishouhuo"></text>
           <text>待收货</text>
         </view>
-        <view class="order-item" hover-class="common-hover" :hover-stay-time="50">
+        <view
+          class="order-item"
+          hover-class="common-hover"
+          :hover-stay-time="50"
+          @click="handleNavTo('/pages/order/returnList')"
+        >
           <text class="yticon icon-shouhoutuikuan"></text>
           <text>退款/售后</text>
         </view>
@@ -211,6 +217,15 @@ const handleNavTo = (url: string) => {
   })
 }
 
+// 未登录时从个人信息区域进入登录页
+const handleLogin = () => {
+  if (!hasLogin.value) {
+    uni.navigateTo({
+      url: '/pages/public/login',
+    })
+  }
+}
+
 // 跳转到通知页（小程序端导航栏右侧按钮）
 const handleNavToNotice = () => {
   uni.navigateTo({
@@ -321,6 +336,13 @@ const handleCoverTouchend = () => {
     font-size: 38rpx;
     color: #303133;
     margin-left: 20rpx;
+  }
+
+  .login-hint {
+    display: block;
+    margin: 10rpx 0 0 20rpx;
+    color: #606266;
+    font-size: 24rpx;
   }
 }
 

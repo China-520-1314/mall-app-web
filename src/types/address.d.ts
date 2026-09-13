@@ -25,6 +25,4 @@ export type MemberReceiveAddress = {
   region?: string
   /** 详细地址(街道) */
   detailAddress?: string
-  /** 前端扩展字段：省市区拼接（用于表单输入） */
-  prefixAddress?: string
 }

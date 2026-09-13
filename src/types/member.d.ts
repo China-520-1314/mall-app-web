@@ -26,20 +26,30 @@ export type LoginResult = {
 
 /** 登录请求参数 */
 export type LoginParam = {
-  /** 账户名 */
-  username: string
+  /** QQ邮箱账号 */
+  email: string
   /** 密码 */
   password: string
 }
 
 /** 注册请求参数 */
 export type RegisterParam = {
-  /** 账户名 */
-  username: string
   /** 密码 */
   password: string
-  /** 手机号 */
-  telephone: string
-  /** 验证码 */
+  /** 再次输入的密码 */
+  confirmPassword: string
+  /** 已验证的QQ邮箱 */
+  email: string
+  /** 邮箱验证码 */
   authCode: string
 }
+
+/** 密码重置请求参数 */
+export type ResetPasswordParam = {
+  email: string
+  password: string
+  authCode: string
+}
+
+/** 邮箱验证码使用场景 */
+export type EmailCodePurpose = 'REGISTER' | 'RESET_PASSWORD'

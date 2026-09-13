@@ -1,5 +1,0 @@
-素材名称：A Tom sprite.webp
-来源页面：https://petdex.dev/pets/a-tom
-素材地址：https://assets.petdex.dev/pets/a-tom-0b70614c22ef/sprite.webp
-用途：Mall 商城智能客服入口的浮动宠物
-说明：项目使用者已明确允许直接复用该公开素材；公开发布时请继续遵守作者及底层 IP 的授权要求。

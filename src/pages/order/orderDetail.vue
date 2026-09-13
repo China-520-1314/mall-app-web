@@ -110,12 +110,13 @@
         <button class="action-btn recom" @click="handlePayOrder(order.id)">立即付款</button>
       </view>
       <view class="action-box b-t" v-if="order.status === 2">
-        <button class="action-btn" @click="showLogistics">查看物流</button>
+        <button class="action-btn">查看物流</button>
         <button class="action-btn recom" @click="handleReceiveOrder(order.id)">确认收货</button>
       </view>
       <view class="action-box b-t" v-if="order.status === 3">
-        <button class="action-btn" @click="showAfterSaleInfo">售后说明</button>
-        <button class="action-btn recom">评价商品</button>
+        <button class="action-btn" @click="handleReturnApply(order.id)">申请售后</button>
+        <button v-if="!order.commentTime" class="action-btn recom" @click="handleCommentOrder(order.id)">评价商品</button>
+        <button v-else class="action-btn" disabled>已评价</button>
       </view>
       <view class="price-content" v-if="order.status === 0">
         <text>应付金额</text>
@@ -163,21 +164,6 @@ onLoad((options) => {
 })
 
 // ===== 事件处理方法 =====
-const showLogistics = () => {
-  const info = order.value
-  uni.showModal({
-    title: '物流信息',
-    content: info.deliverySn
-      ? `物流公司：${info.deliveryCompany || '暂未填写'}\n运单号：${info.deliverySn}\n暂不提供实时物流轨迹，可复制运单号到承运商官方渠道查询。`
-      : '商家暂未录入运单信息，请稍后查看。',
-    showCancel: !!info.deliverySn,
-    confirmText: info.deliverySn ? '复制单号' : '知道了',
-    success: result => { if (result.confirm && info.deliverySn) uni.setClipboardData({ data: info.deliverySn }) },
-  })
-}
-const showAfterSaleInfo = () => {
-  uni.showModal({ title: '售后说明', content: '商城暂未开放完整的在线售后申请。请保留订单编号、商品信息和问题凭证；退款资格、金额和时效需由商家核实。', showCancel: false })
-}
 
 // 取消订单
 const handleCancelOrder = (id: number) => {
@@ -226,6 +212,15 @@ const handleReceiveOrder = (id: number) => {
       }
     },
   })
+}
+
+const handleCommentOrder = (id: number) => {
+  uni.navigateTo({ url: `/pages/order/comment?orderId=${id}` })
+}
+
+// 申请售后
+const handleReturnApply = (id: number) => {
+  uni.navigateTo({ url: `/pages/order/returnApply?orderId=${id}` })
 }
 
 // ===== 其他方法 =====

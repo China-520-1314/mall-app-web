@@ -9,12 +9,14 @@
     <text v-if="icon" class="cell-icon yticon" :style="[{ color: iconColor }]" :class="icon"></text>
     <text class="cell-tit clamp">{{ title }}</text>
     <text v-if="tips" class="cell-tip">{{ tips }}</text>
-    <text v-if="navigateType" class="cell-more yticon" :class="typeList[navigateType]"></text>
+    <text class="cell-more yticon" :class="typeList[navigateType]"></text>
   </view>
 </template>
 
 <script setup lang="ts">
-defineProps<{
+import { computed } from 'vue'
+
+const props = defineProps<{
   icon?: string
   title?: string
   tips?: string

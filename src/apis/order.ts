@@ -4,7 +4,10 @@ import type {
   GenerateOrderResult,
   OrderParam,
   OmsOrderDetail,
+  OmsOrderReturnApply,
   OmsOrderReturnApplyParam,
+  PortalReturnApplyDetail,
+  ReturnDeliveryParam,
 } from '@/types/order'
 import type { CommonPage, PageParam } from '@/types/common'
 
@@ -14,6 +17,19 @@ export const generateConfirmOrderAPI = (cartIds: number[]) => {
     method: 'POST',
     url: '/order/generateConfirmOrder',
     data: cartIds,
+  })
+}
+
+/** 生成立即购买确认单 */
+export const generateBuyNowConfirmOrderAPI = (data: {
+  buyNowProductId: number
+  buyNowSkuId: number
+  buyNowQuantity: number
+}) => {
+  return http<ConfirmOrderResult>({
+    method: 'POST',
+    url: '/order/generateBuyNowConfirmOrder',
+    data,
   })
 }
 
@@ -88,11 +104,45 @@ export const fetchAliapyStatusAPI = (params: { outTradeNo: string }) => {
   })
 }
 
-/** 申请退货 */
+/** 申请售后 */
 export const createReturnApplyAPI = (data: OmsOrderReturnApplyParam) => {
   return http({
     method: 'POST',
     url: '/returnApply/create',
     data,
+  })
+}
+
+/** 分页查询当前会员的售后单 */
+export const getReturnApplyListAPI = (params: PageParam) => {
+  return http<CommonPage<OmsOrderReturnApply>>({
+    method: 'GET',
+    url: '/returnApply/list',
+    params,
+  })
+}
+
+/** 查询售后单详情（含进度时间线） */
+export const getReturnApplyDetailAPI = (id: number) => {
+  return http<PortalReturnApplyDetail>({
+    method: 'GET',
+    url: `/returnApply/detail/${id}`,
+  })
+}
+
+/** 填写寄回物流信息 */
+export const fillReturnDeliveryAPI = (data: ReturnDeliveryParam) => {
+  return http({
+    method: 'POST',
+    url: '/returnApply/fillDelivery',
+    data,
+  })
+}
+
+/** 撤销售后申请 */
+export const cancelReturnApplyAPI = (id: number) => {
+  return http({
+    method: 'POST',
+    url: `/returnApply/cancel/${id}`,
   })
 }

@@ -6,8 +6,6 @@
     "url": "https://www.macrozheng.com/"
   },
   "scripts": {
-    "test:number-box": "node --test scripts/test-number-box.cjs",
-    "test:assistant": "node --test scripts/test-assistant-session.cjs",
     "dev:app": "uni -p app",
     "dev:app-android": "uni -p app-android",
     "dev:app-ios": "uni -p app-ios",
@@ -62,6 +60,7 @@
     "@dcloudio/uni-mp-xhs": "3.0.0-5000720260410001",
     "@dcloudio/uni-quickapp-webview": "3.0.0-5000720260410001",
     "@dcloudio/uni-ui": "^1.5.11",
+    "china-region-data": "^1.3.2",
     "pinia": "2.0.27",
     "pinia-plugin-persistedstate": "^3.2.0",
     "vue": "^3.5.20",

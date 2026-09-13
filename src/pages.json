@@ -24,14 +24,6 @@
             "buttons": [
               {
                 "fontSrc": "/static/yticon.ttf",
-                "text": "\ue60d",
-                "fontSize": "26",
-                "color": "#ffffff",
-                "float": "left",
-                "background": "rgba(0,0,0,0)"
-              },
-              {
-                "fontSrc": "/static/yticon.ttf",
                 "text": "\ue744",
                 "fontSize": "27",
                 "color": "#ffffff",
@@ -182,6 +174,31 @@
       "path": "pages/order/orderDetail",
       "style": {
         "navigationBarTitleText": "订单详情"
+      }
+    },
+    {
+      "path": "pages/order/comment",
+      "style": {
+        "navigationBarTitleText": "评价商品"
+      }
+    },
+    {
+      "path": "pages/order/returnApply",
+      "style": {
+        "navigationBarTitleText": "申请售后"
+      }
+    },
+    {
+      "path": "pages/order/returnList",
+      "style": {
+        "navigationBarTitleText": "退款/售后",
+        "enablePullDownRefresh": false
+      }
+    },
+    {
+      "path": "pages/order/returnDetail",
+      "style": {
+        "navigationBarTitleText": "售后进度"
       }
     },
     {

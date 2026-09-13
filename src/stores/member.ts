@@ -19,16 +19,17 @@ export const useMemberStore = defineStore(
     }
 
     // 会员登录（核心业务逻辑，不包含 UI 交互）
-    const memberLogin = async (username: string, password: string) => {
+    const memberLogin = async (email: string, password: string) => {
       // 1. 调用登录接口获取 token
-      const loginRes = await loginAPI({ username, password })
+      const loginRes = await loginAPI({ email, password })
 
       // 2. 拼接完整 token 并存储
       const loginData = loginRes.data
       const token = `${loginData.tokenHead}${loginData.token}`
       uni.setStorageSync('token', token)
-      uni.setStorageSync('username', username)
-      uni.setStorageSync('password', password)
+      uni.setStorageSync('email', email)
+      uni.removeStorageSync('password')
+      uni.removeStorageSync('username')
 
       // 3. 获取用户信息
       const memberRes = await getMemberInfoAPI()
@@ -41,6 +42,8 @@ export const useMemberStore = defineStore(
     const memberLogout = () => {
       memberInfo.value = undefined
       uni.removeStorageSync('token')
+      uni.removeStorageSync('password')
+      uni.removeStorageSync('username')
     }
 
     return {

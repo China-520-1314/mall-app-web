@@ -98,27 +98,34 @@
     <view class="eva-section">
       <view class="e-header">
         <text class="tit">评价</text>
-        <text>(86)</text>
-        <text class="tip">好评率 100%</text>
-        <text class="yticon icon-you"></text>
+        <text>({{ commentTotal }})</text>
+        <text class="tip">好评率 {{ goodCommentRate }}% · 平均 {{ averageCommentStar }}分</text>
       </view>
-      <view class="eva-box">
+      <view class="eva-box" v-for="item in commentList" :key="item.id">
         <image
           class="portrait"
-          src="http://img3.imgtn.bdimg.com/it/u=1150341365,1327279810&fm=26&gp=0.jpg"
+          :src="item.memberIcon || '/static/missing-face.png'"
           mode="aspectFill"
         ></image>
         <view class="right">
-          <text class="name">Leo yo</text>
-          <text class="con"
-            >商品收到了，79元两件，质量不错，试了一下有点瘦，但是加个外罩很漂亮，我很喜欢</text
-          >
+          <text class="name">{{ item.memberNickName }}</text>
+          <text class="con">{{ item.content }}</text>
+          <view class="comment-pics" v-if="splitCommentPics(item.pics).length">
+            <image
+              v-for="pic in splitCommentPics(item.pics)"
+              :key="pic"
+              :src="resolveProductMediaUrl(pic)"
+              mode="aspectFill"
+              @click="previewCommentImage(item.pics, pic)"
+            />
+          </view>
           <view class="bot">
-            <text class="attr">购买类型：XL 红色</text>
-            <text class="time">2019-04-01 19:21</text>
+            <text class="attr">{{ item.productAttribute || '已购买' }}</text>
+            <text class="time">{{ formatDateTime(item.createTime) }}</text>
           </view>
         </view>
       </view>
+      <view class="empty-comment" v-if="commentList.length === 0">暂无评价，购买后欢迎分享体验</view>
     </view>
 
     <!-- 品牌信息 -->
@@ -256,7 +263,12 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { onLoad, onPageScroll } from '@dcloudio/uni-app'
-import { getProductDetailAPI } from '@/apis/product'
+import {
+  getProductDetailAPI,
+  getProductCommentsAPI,
+  getProductCommentSummaryAPI,
+  resolveProductMediaUrl,
+} from '@/apis/product'
 import { addCartAPI } from '@/apis/cart'
 import { getProductCouponListAPI, addMemberCouponAPI } from '@/apis/coupon'
 import { createReadHistoryAPI } from '@/apis/memberReadHistory'
@@ -276,6 +288,7 @@ import type {
   SpecOption,
   ServiceItem,
   ShareItem,
+  PmsComment,
 } from '@/types/product'
 import type { PmsBrand } from '@/types/brand'
 import type { SmsCoupon } from '@/types/coupon'
@@ -345,6 +358,10 @@ const serviceList = ref<string[]>([])
 
 // 优惠券
 const couponList = ref<SmsCoupon[]>([])
+const commentList = ref<PmsComment[]>([])
+const commentTotal = ref(0)
+const goodCommentRate = ref(0)
+const averageCommentStar = ref(0)
 
 // 格式化时间（保留到秒）
 const formatDateTime = (time: string | null | undefined): string => {
@@ -398,6 +415,7 @@ const loadData = async (id: number) => {
       initProductDesc()
       saveReadHistory()
       initProductCollection()
+      loadComments(id)
     }
   } catch (error) {
     console.error('加载商品详情失败:', error)
@@ -416,6 +434,29 @@ onLoad((options) => {
   shareList.value = defaultShareList
   loadData(id)
 })
+
+const loadComments = async (id: number) => {
+  try {
+    const [commentRes, summaryRes] = await Promise.all([
+      getProductCommentsAPI(id, 1, 3),
+      getProductCommentSummaryAPI(id),
+    ])
+    commentList.value = commentRes.data?.list || []
+    commentTotal.value = summaryRes.data?.totalCount || 0
+    goodCommentRate.value = summaryRes.data?.goodRate || 0
+    averageCommentStar.value = summaryRes.data?.averageStar || 0
+  } catch (error) {
+    console.error('加载商品评价失败:', error)
+  }
+}
+
+const splitCommentPics = (pics?: string) =>
+  pics ? pics.split(',').map((pic) => pic.trim()).filter(Boolean) : []
+
+const previewCommentImage = (pics: string | undefined, current: string) => {
+  const urls = splitCommentPics(pics).map(resolveProductMediaUrl)
+  uni.previewImage({ current: resolveProductMediaUrl(current), urls })
+}
 
 // 监听页面滚动
 onPageScroll((e: { scrollTop: number }) => {
@@ -777,9 +818,27 @@ const handleToggleFavorite = async () => {
 
 // 立即购买
 const handleBuy = () => {
-  uni.showToast({
-    title: '暂时只支持从购物车下单！',
-    icon: 'none',
+  if (!memberStore.hasLogin) {
+    handleCheckLogin()
+    return
+  }
+  const skuStock = getSkuStock()
+  if (!skuStock) {
+    uni.showToast({
+      title: '请选择规格',
+      icon: 'none',
+    })
+    return
+  }
+  if (!skuStock.stock || skuStock.stock <= skuStock.lockStock) {
+    uni.showToast({
+      title: '库存不足',
+      icon: 'none',
+    })
+    return
+  }
+  uni.navigateTo({
+    url: `/pages/order/createOrder?buyNowProductId=${product.value.id}&buyNowSkuId=${skuStock.id}&buyNowQuantity=1`,
   })
 }
 
@@ -1159,6 +1218,19 @@ page {
       font-size: $font-base;
       color: $font-color-dark;
       padding: 20rpx 0;
+    }
+
+    .comment-pics {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12rpx;
+      padding-bottom: 18rpx;
+
+      image {
+        width: 150rpx;
+        height: 150rpx;
+        border-radius: 8rpx;
+      }
     }
 
     .bot {

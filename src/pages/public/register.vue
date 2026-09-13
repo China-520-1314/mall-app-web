@@ -4,199 +4,179 @@
     <view class="back-btn yticon icon-zuojiantou-up" @click="navBack"></view>
     <view class="right-top-sign"></view>
 
-    <!-- 原页面：二维码关注 -->
-    <view class="wrapper" v-if="pageMode === 'qrcode'">
-      <view class="empty">
-        <image src="/static/qrcode_for_macrozheng_258.jpg" mode="aspectFit"></image>
-        <view class="empty-tips"> 扫描上方二维码<view class="navigator">关注公众号</view>, </view>
-        <view class="empty-tips"> 回复<view class="navigator">会员</view>获取体验账号。 </view>
-      </view>
-    </view>
-
-    <!-- 注册表单 -->
-    <view class="wrapper" v-if="pageMode === 'register'">
-      <view class="left-top-sign">REGISTER</view>
-      <view class="welcome">注册账号！</view>
+    <view class="wrapper">
+      <view class="left-top-sign">{{ pageMode === 'register' ? 'REGISTER' : 'RESET' }}</view>
+      <view class="welcome">{{ pageMode === 'register' ? '注册账号！' : '重置密码' }}</view>
       <view class="input-content">
         <view class="input-item">
-          <text class="tit">用户名</text>
-          <input
-            type="text"
-            v-model="formData.username"
-            placeholder="请输入用户名"
-            :maxlength="20"
-          />
+          <text class="tit">QQ邮箱账号</text>
+          <view class="qq-email-input">
+            <input
+              type="number"
+              v-model="formData.email"
+              placeholder="请输入QQ号"
+              :maxlength="12"
+            />
+            <text class="email-suffix">@qq.com</text>
+          </view>
         </view>
         <view class="input-item">
-          <text class="tit">手机号</text>
-          <input
-            type="number"
-            v-model="formData.telephone"
-            placeholder="请输入手机号"
-            :maxlength="11"
-          />
+          <text class="tit">邮箱验证码</text>
+          <view class="auth-code-row">
+            <input
+              type="number"
+              v-model="formData.authCode"
+              placeholder="请输入6位验证码"
+              :maxlength="6"
+            />
+            <button
+              class="get-code-btn"
+              :class="{ disabled: countdown > 0 || sendingCode }"
+              :disabled="countdown > 0 || sendingCode"
+              @click="handleSendEmailCode"
+            >
+              {{ countdown > 0 ? `${countdown}秒后重试` : sendingCode ? '发送中' : '获取验证码' }}
+            </button>
+          </view>
         </view>
         <view class="input-item">
-          <text class="tit">密码</text>
+          <text class="tit">{{ pageMode === 'register' ? '密码' : '新密码' }}</text>
           <input
             v-model="formData.password"
-            placeholder="8-18位不含特殊字符的数字、字母组合"
+            placeholder="8-20位字母和数字组合"
             placeholder-class="input-empty"
             :maxlength="20"
             password
           />
         </view>
-        <view class="input-item">
-          <text class="tit">验证码</text>
-          <view class="auth-code-row">
-            <input
-              type="text"
-              v-model="formData.authCode"
-              placeholder="请输入验证码"
-              :maxlength="6"
-            />
-            <button
-              class="get-code-btn"
-              :class="{ disabled: countdown > 0 }"
-              :disabled="countdown > 0"
-              @click="handleGetAuthCode"
-            >
-              {{ countdown > 0 ? `${countdown}s后重试` : '获取验证码' }}
-            </button>
-          </view>
+        <view v-if="pageMode === 'register'" class="input-item">
+          <text class="tit">确认密码</text>
+          <input
+            v-model="formData.confirmPassword"
+            placeholder="请再次输入密码"
+            placeholder-class="input-empty"
+            :maxlength="20"
+            password
+          />
         </view>
       </view>
-      <button class="confirm-btn" @click="handleRegister" :disabled="registering"> 注册 </button>
+      <button class="confirm-btn" @click="handleSubmit" :disabled="submitting">
+        {{ pageMode === 'register' ? '注册' : '重置密码' }}
+      </button>
     </view>
   </view>
 </template>
 
 <script setup lang="ts">
 import { ref } from 'vue'
-import { onLoad } from '@dcloudio/uni-app'
-import { registerAPI, getAuthCodeAPI } from '@/apis/member'
-import type { RegisterParam } from '@/types/member'
+import { onLoad, onUnload } from '@dcloudio/uni-app'
+import { registerAPI, resetPasswordAPI, sendEmailCodeAPI } from '@/apis/member'
+import type { RegisterParam, EmailCodePurpose } from '@/types/member'
+import { useMemberStore } from '@/stores/member'
 
 // ===== 页面数据 =====
-// 页面模式：qrcode=二维码页面, register=注册表单
-const pageMode = ref<'qrcode' | 'register'>('qrcode')
+// 页面模式：register=注册表单, reset=密码找回
+const pageMode = ref<'register' | 'reset'>('register')
 // 注册表单数据
 const formData = ref<RegisterParam>({
-  username: '',
   password: '',
-  telephone: '',
+  confirmPassword: '',
+  email: '',
   authCode: '',
 })
-// 注册加载状态
-const registering = ref(false)
-// 验证码倒计时（秒）
+const submitting = ref(false)
+const sendingCode = ref(false)
 const countdown = ref(0)
-// 倒计时定时器
 let countdownTimer: ReturnType<typeof setInterval> | null = null
+const memberStore = useMemberStore()
 
 // ===== 生命周期 =====
 // 页面加载时根据参数设置模式
 onLoad((options) => {
-  if (options?.mode === 'register') {
-    pageMode.value = 'register'
+  if (options?.mode === 'register' || options?.mode === 'reset') {
+    pageMode.value = options.mode
   } else {
-    pageMode.value = 'qrcode'
+    pageMode.value = 'register'
   }
 })
 
-// 获取验证码
-const handleGetAuthCode = async () => {
-  if (!formData.value.telephone) {
-    uni.showToast({
-      title: '请输入手机号',
-      icon: 'none',
-    })
-    return
-  }
-  if (!/^1[3-9]\d{9}$/.test(formData.value.telephone)) {
-    uni.showToast({
-      title: '手机号格式不正确',
-      icon: 'none',
-    })
-    return
-  }
+onUnload(() => {
+  if (countdownTimer) clearInterval(countdownTimer)
+})
 
+const isValidQQNumber = (value: string) => /^[1-9][0-9]{4,11}$/.test(value.trim())
+const getQQEmail = () => `${formData.value.email.trim()}@qq.com`
+
+const currentPurpose = (): EmailCodePurpose =>
+  pageMode.value === 'reset' ? 'RESET_PASSWORD' : 'REGISTER'
+
+const startCountdown = () => {
+  countdown.value = 10
+  if (countdownTimer) clearInterval(countdownTimer)
+  countdownTimer = setInterval(() => {
+    countdown.value--
+    if (countdown.value <= 0 && countdownTimer) {
+      clearInterval(countdownTimer)
+      countdownTimer = null
+    }
+  }, 1000)
+}
+
+const handleSendEmailCode = async () => {
+  if (!isValidQQNumber(formData.value.email)) {
+    uni.showToast({ title: '请输入正确的QQ号', icon: 'none' })
+    return
+  }
+  const email = getQQEmail()
+  sendingCode.value = true
   try {
-    const res = await getAuthCodeAPI(formData.value.telephone)
-    // 模拟验证码展示：弹出5秒toast让用户获取验证码
-    const code = res.data || '验证码已发送'
-    uni.showToast({
-      title: `验证码：${code}`,
-      icon: 'none',
-      duration: 5000,
-    })
-    // 开始60秒倒计时
+    await sendEmailCodeAPI(email, currentPurpose())
     startCountdown()
-  } catch {
-    uni.showToast({
-      title: '获取验证码失败',
-      icon: 'none',
-    })
+    uni.showToast({ title: '验证码已发送', icon: 'success' })
+  } finally {
+    sendingCode.value = false
   }
 }
 
-// 注册
-const handleRegister = async () => {
-  const { username, telephone, password, authCode } = formData.value
-  if (!username) {
-    uni.showToast({ title: '请输入用户名', icon: 'none' })
+const handleSubmit = async () => {
+  const { password, confirmPassword, authCode } = formData.value
+  if (!isValidQQNumber(formData.value.email)) {
+    uni.showToast({ title: '请输入正确的QQ号', icon: 'none' })
     return
   }
-  if (!telephone) {
-    uni.showToast({ title: '请输入手机号', icon: 'none' })
+  const email = getQQEmail()
+  if (!/^[0-9]{6}$/.test(authCode)) {
+    uni.showToast({ title: '请输入6位邮箱验证码', icon: 'none' })
     return
   }
-  if (!password) {
-    uni.showToast({ title: '请输入密码', icon: 'none' })
+  if (!/^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,20}$/.test(password)) {
+    uni.showToast({ title: '密码须为8到20位字母和数字组合', icon: 'none' })
     return
   }
-  if (!authCode) {
-    uni.showToast({ title: '请输入验证码', icon: 'none' })
+  if (pageMode.value === 'register' && password !== confirmPassword) {
+    uni.showToast({ title: '两次输入的密码不一致', icon: 'none' })
     return
   }
-
-  registering.value = true
+  submitting.value = true
   try {
-    await registerAPI(formData.value)
-    uni.showToast({
-      title: '注册成功',
-      icon: 'success',
-    })
+    if (pageMode.value === 'register') {
+      await registerAPI({ ...formData.value, email })
+      await memberStore.memberLogin(email, password)
+      uni.showToast({ title: '注册并登录成功', icon: 'success' })
+      setTimeout(() => {
+        uni.switchTab({ url: '/pages/user/user' })
+      }, 1000)
+      return
+    } else {
+      await resetPasswordAPI({ email, password, authCode })
+    }
+    uni.showToast({ title: '密码重置成功', icon: 'success' })
     setTimeout(() => {
       uni.redirectTo({ url: '/pages/public/login' })
     }, 1500)
-  } catch {
-    uni.showToast({
-      title: '注册失败，请重试',
-      icon: 'none',
-    })
   } finally {
-    registering.value = false
+    submitting.value = false
   }
-}
-
-// ===== 其他方法 =====
-// 开始60秒倒计时
-const startCountdown = () => {
-  countdown.value = 60
-  if (countdownTimer) {
-    clearInterval(countdownTimer)
-  }
-  countdownTimer = setInterval(() => {
-    countdown.value--
-    if (countdown.value <= 0) {
-      countdown.value = 0
-      if (countdownTimer) {
-        clearInterval(countdownTimer)
-        countdownTimer = null
-      }
-    }
-  }, 1000)
 }
 
 // 返回上一页
@@ -217,7 +197,7 @@ page {
   position: relative;
   width: 100vw;
   height: 100vh;
-  overflow: hidden;
+  overflow-y: auto;
   background: #fff;
 }
 
@@ -291,37 +271,6 @@ page {
   text-shadow: 1px 0px 1px rgba(0, 0, 0, 0.3);
 }
 
-.empty {
-  position: fixed;
-  left: 0;
-  top: 0;
-  width: 100%;
-  height: 100vh;
-  padding-bottom: 100rpx;
-  display: flex;
-  justify-content: center;
-  flex-direction: column;
-  align-items: center;
-  background: #fff;
-
-  image {
-    width: 420rpx;
-    height: 420rpx;
-    margin-bottom: 30rpx;
-  }
-
-  .empty-tips {
-    display: flex;
-    font-size: 28rpx;
-    color: $font-color-disabled;
-
-    .navigator {
-      color: $uni-color-primary;
-      margin-left: 0rpx;
-    }
-  }
-}
-
 .input-content {
   padding: 0 60rpx;
 }
@@ -333,9 +282,9 @@ page {
   justify-content: center;
   padding: 0 30rpx;
   background: $page-color-light;
-  height: 120rpx;
+  min-height: 104rpx;
   border-radius: 4px;
-  margin-bottom: 50rpx;
+  margin-bottom: 24rpx;
 
   &:last-child {
     margin-bottom: 0;
@@ -390,12 +339,32 @@ page {
   }
 }
 
+.qq-email-input {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  height: 60rpx;
+
+  input {
+    flex: 1;
+    min-width: 0;
+  }
+}
+
+.email-suffix {
+  flex-shrink: 0;
+  padding-left: 12rpx;
+  font-size: $font-base + 2rpx;
+  color: $font-color-dark;
+}
+
 .confirm-btn {
   width: 630rpx;
   height: 76rpx;
   line-height: 76rpx;
   border-radius: 50px;
-  margin-top: 70rpx;
+  margin-top: 36rpx;
+  margin-bottom: 60rpx;
   background: $uni-color-primary;
   color: #fff;
   font-size: $font-lg;

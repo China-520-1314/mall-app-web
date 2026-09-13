@@ -137,6 +137,12 @@ export type OrderParam = {
   memberReceiveAddressId?: number
   /** 使用的积分数 */
   useIntegration: number
+  /** 立即购买商品ID（与 cartIds 二选一） */
+  buyNowProductId?: number
+  /** 立即购买SKU ID */
+  buyNowSkuId?: number
+  /** 立即购买数量 */
+  buyNowQuantity?: number
 }
 
 /** 生成订单返回结果（对应后端 OrderResult） */
@@ -242,7 +248,7 @@ export type OmsOrderDetail = {
   /** 发货时间 */
   deliveryTime: string
   /** 评价时间 */
-  commentTime: string
+  commentTime?: string | null
   /** 确认收货状态：0->未确认；1->已确认 */
   confirmStatus: number
   /** 删除状态：0->未删除；1->已删除 */
@@ -317,4 +323,71 @@ export type OmsOrderReturnApplyParam = {
   returnName: string
   /** 退货人电话 */
   returnPhone: string
+}
+
+/** 售后单（列表项） */
+export type OmsOrderReturnApply = {
+  id: number
+  orderId: number
+  companyAddressId?: number | null
+  productId: number
+  orderSn: string
+  createTime: string
+  memberUsername: string
+  returnAmount?: number | null
+  returnName: string
+  returnPhone: string
+  /** 状态：0->待处理；1->退货中；2->已完成；3->已拒绝；4->待收货；5->已取消 */
+  status: number
+  handleTime?: string | null
+  productPic: string
+  productName: string
+  productBrand: string
+  productAttr: string
+  productCount: number
+  productPrice: number
+  productRealPrice: number
+  reason: string
+  description: string
+  proofPics?: string
+  handleNote?: string
+  handleMan?: string
+  receiveMan?: string
+  receiveTime?: string | null
+  receiveNote?: string
+  /** 会员寄回快递公司 */
+  returnDeliveryCompany?: string | null
+  /** 会员寄回快递单号 */
+  returnDeliverySn?: string | null
+  /** 会员寄回时间 */
+  shipTime?: string | null
+}
+
+/** 售后进度日志（时间线节点） */
+export type OmsOrderReturnApplyLog = {
+  id: number
+  applyId: number
+  status: number
+  title: string
+  note?: string | null
+  /** 操作者类型：0->会员；1->商家；2->系统 */
+  operatorType: number
+  operatorName: string
+  createTime: string
+}
+
+/** 售后单详情（含进度时间线、商家退货地址） */
+export type PortalReturnApplyDetail = OmsOrderReturnApply & {
+  logList: OmsOrderReturnApplyLog[]
+  companyAddressName?: string
+  companyReceiverName?: string
+  companyReceiverPhone?: string
+  companyDetailAddress?: string
+}
+
+/** 填写寄回物流参数 */
+export type ReturnDeliveryParam = {
+  id: number
+  deliveryCompany: string
+  deliverySn: string
 }

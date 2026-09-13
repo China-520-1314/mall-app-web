@@ -1,5 +1,12 @@
 import { http } from '@/utils/http'
-import type { LoginResult, MemberInfo, LoginParam, RegisterParam } from '@/types/member'
+import type {
+  LoginResult,
+  MemberInfo,
+  LoginParam,
+  RegisterParam,
+  ResetPasswordParam,
+  EmailCodePurpose,
+} from '@/types/member'
 
 /** 登录 */
 export const loginAPI = (data: LoginParam) => {
@@ -33,11 +40,26 @@ export const registerAPI = (data: RegisterParam) => {
   })
 }
 
-/** 获取验证码 */
-export const getAuthCodeAPI = (telephone: string) => {
+/** 发送QQ邮箱验证码 */
+export const sendEmailCodeAPI = (email: string, purpose: EmailCodePurpose) => {
   return http({
-    method: 'GET',
-    url: '/sso/getAuthCode',
-    params: { telephone },
+    method: 'POST',
+    url: '/sso/sendEmailCode',
+    header: {
+      'content-type': 'application/x-www-form-urlencoded;charset=utf-8',
+    },
+    data: { email, purpose },
+  })
+}
+
+/** 通过邮箱验证码重置密码 */
+export const resetPasswordAPI = (data: ResetPasswordParam) => {
+  return http({
+    method: 'POST',
+    url: '/sso/updatePassword',
+    header: {
+      'content-type': 'application/x-www-form-urlencoded;charset=utf-8',
+    },
+    data,
   })
 }

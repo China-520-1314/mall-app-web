@@ -230,6 +230,49 @@ export type PmsPortalProductDetail = {
   couponList: SmsCoupon[]
 }
 
+/** 商品评价 */
+export type PmsComment = {
+  id: number
+  productId: number
+  memberNickName: string
+  productName: string
+  star: number
+  memberIp?: string
+  createTime: string
+  showStatus: number
+  productAttribute?: string
+  pics?: string
+  memberIcon?: string
+  content: string
+}
+
+/** 商品评价聚合统计 */
+export type ProductCommentSummary = {
+  totalCount: number
+  goodCount: number
+  goodRate: number
+  averageStar: number
+  star1Count: number
+  star2Count: number
+  star3Count: number
+  star4Count: number
+  star5Count: number
+}
+
+/** 单个订单项的评价参数 */
+export type ProductCommentInput = {
+  orderItemId: number
+  star: number
+  content: string
+  pics?: string
+}
+
+/** 一个订单的批量评价参数 */
+export type ProductCommentBatchParam = {
+  orderId: number
+  comments: ProductCommentInput[]
+}
+
 /** 规格选项（前端专用） */
 export type SpecOption = {
   /** 规格ID */

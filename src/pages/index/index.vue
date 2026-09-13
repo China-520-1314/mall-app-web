@@ -3,7 +3,7 @@
     <!-- 小程序头部兼容 -->
     <!-- #ifdef MP -->
     <view class="mp-search-box">
-      <text class="yticon icon-saomiao nav-icon" @click="handleScan"></text>
+      <text class="yticon icon-sousuo nav-icon" @click="handleSearch"></text>
       <input class="ser-input" type="text" value="输入关键字搜索" disabled @click="handleSearch" />
       <text class="yticon icon-icon-- nav-icon" @click="handleNavToNotice"></text>
     </view>
@@ -192,6 +192,7 @@
       </view>
     </view>
     <uni-load-more :status="loadingType"></uni-load-more>
+    <assistant-pet />
   </view>
 </template>
 
@@ -210,6 +211,7 @@ import type { SmsHomeAdvertise, HomeFlashPromotion } from '@/types/home'
 import type { PmsProduct } from '@/types/product'
 import type { PmsBrand } from '@/types/brand'
 import type { PageParam } from '@/types/common'
+import AssistantPet from '@/components/assistant-pet.vue'
 
 // ===== 页面数据 =====
 // 标题栏背景色
@@ -333,10 +335,6 @@ onPageScroll((e: { scrollTop: number }) => {
     currentWebview.setTitleNViewButtonStyle(0, {
       color: isScrolled.value ? '#303133' : '#ffffff',
     })
-    // @ts-ignore
-    currentWebview.setTitleNViewButtonStyle(1, {
-      color: isScrolled.value ? '#303133' : '#ffffff',
-    })
   }
   // #endif
   // #ifdef H5
@@ -418,14 +416,6 @@ const handleSearch = () => {
   })
 }
 
-// 扫描功能（小程序端导航栏左侧按钮）
-const handleScan = () => {
-  uni.showToast({
-    icon: 'none',
-    title: '扫描功能开发中',
-  })
-}
-
 // 跳转到通知页（小程序端导航栏右侧按钮）
 const handleNavToNotice = () => {
   uni.navigateTo({
@@ -453,11 +443,6 @@ const formatTime = (time: string | undefined) => {
 onNavigationBarButtonTap((e: { index: number }) => {
   const index = e.index
   if (index === 0) {
-    uni.showToast({
-      icon: 'none',
-      title: '扫描功能开发中',
-    })
-  } else if (index === 1) {
     // #ifdef APP-PLUS
     const pages = getCurrentPages()
     const page = pages[pages.length - 1]

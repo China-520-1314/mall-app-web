@@ -64,13 +64,14 @@
               <button class="action-btn recom" @click="handlePayOrder(item.id)">立即付款</button>
             </view>
             <view v-if="item.status === 2" class="action-box b-t">
-              <button class="action-btn" @click.stop="handleShowOrderDetail(item.id)">查看物流</button>
+              <button class="action-btn">查看物流</button>
               <button class="action-btn recom" @click="handleReceiveOrder(item.id)">
                 确认收货
               </button>
             </view>
             <view v-if="item.status === 3" class="action-box b-t">
-              <button class="action-btn recom">评价商品</button>
+              <button v-if="!item.commentTime" class="action-btn recom" @click="handleCommentOrder(item.id)">评价商品</button>
+              <button v-else class="action-btn" disabled>已评价</button>
             </view>
           </view>
 
@@ -260,6 +261,10 @@ const handleReceiveOrder = (orderId: number) => {
       }
     },
   })
+}
+
+const handleCommentOrder = (orderId: number) => {
+  uni.navigateTo({ url: `/pages/order/comment?orderId=${orderId}` })
 }
 
 // 查看订单详情
