@@ -5,8 +5,8 @@
     <view class="right-top-sign"></view>
 
     <view class="wrapper">
-      <view class="left-top-sign">{{ pageMode === 'register' ? 'REGISTER' : 'RESET' }}</view>
-      <view class="welcome">{{ pageMode === 'register' ? '注册账号！' : '重置密码' }}</view>
+      <view class="left-top-sign">{{ pageMode === 'register' ? 'REGISTER' : 'LOGIN' }}</view>
+      <view class="welcome">{{ pageMode === 'register' ? '注册账号！' : '验证码登录' }}</view>
       <view class="input-content">
         <view class="input-item">
           <text class="tit">QQ邮箱账号</text>
@@ -39,8 +39,8 @@
             </button>
           </view>
         </view>
-        <view class="input-item">
-          <text class="tit">{{ pageMode === 'register' ? '密码' : '新密码' }}</text>
+        <view v-if="pageMode === 'register'" class="input-item">
+          <text class="tit">密码</text>
           <input
             v-model="formData.password"
             placeholder="8-20位字母和数字组合"
@@ -61,7 +61,7 @@
         </view>
       </view>
       <button class="confirm-btn" @click="handleSubmit" :disabled="submitting">
-        {{ pageMode === 'register' ? '注册' : '重置密码' }}
+        {{ pageMode === 'register' ? '注册' : '验证码登录' }}
       </button>
     </view>
   </view>
@@ -70,12 +70,12 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { onLoad, onUnload } from '@dcloudio/uni-app'
-import { registerAPI, resetPasswordAPI, sendEmailCodeAPI } from '@/apis/member'
+import { registerAPI, sendEmailCodeAPI } from '@/apis/member'
 import type { RegisterParam, EmailCodePurpose } from '@/types/member'
 import { useMemberStore } from '@/stores/member'
 
 // ===== 页面数据 =====
-// 页面模式：register=注册表单, reset=密码找回
+// 页面模式：register=注册表单, reset=邮箱验证码登录
 const pageMode = ref<'register' | 'reset'>('register')
 // 注册表单数据
 const formData = ref<RegisterParam>({
@@ -149,7 +149,7 @@ const handleSubmit = async () => {
     uni.showToast({ title: '请输入6位邮箱验证码', icon: 'none' })
     return
   }
-  if (!/^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,20}$/.test(password)) {
+  if (pageMode.value === 'register' && !/^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,20}$/.test(password)) {
     uni.showToast({ title: '密码须为8到20位字母和数字组合', icon: 'none' })
     return
   }
@@ -168,12 +168,11 @@ const handleSubmit = async () => {
       }, 1000)
       return
     } else {
-      await resetPasswordAPI({ email, password, authCode })
+      await memberStore.memberLoginByEmailCode(email, authCode)
+      uni.showToast({ title: '验证码登录成功', icon: 'success' })
+      setTimeout(() => uni.switchTab({ url: '/pages/index/index' }), 800)
+      return
     }
-    uni.showToast({ title: '密码重置成功', icon: 'success' })
-    setTimeout(() => {
-      uni.redirectTo({ url: '/pages/public/login' })
-    }, 1500)
   } finally {
     submitting.value = false
   }
