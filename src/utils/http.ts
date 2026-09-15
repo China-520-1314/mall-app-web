@@ -24,9 +24,9 @@ const httpInterceptor = {
       ...options.header,
     }
     // 4.添加 token（从 storage 获取）
-    const token = uni.getStorageSync('token')
-    if (token) {
-      options.header.Authorization = token
+    const token = String(uni.getStorageSync('token') || '').trim()
+    if (token && options.auth !== false) {
+      options.header.Authorization = `Bearer ${token.replace(/^(Bearer\s+)+/i, '')}`
     }
   },
 }
@@ -63,6 +63,10 @@ const buildQueryString = (params: Record<string, any>): string => {
 export interface HttpRequestOptions extends UniApp.RequestOptions {
   /** 查询参数（会自动拼接到 URL 后面） */
   params?: Record<string, any>
+  /** 登录态失效时静默失败，适用于公开页面上的可选用户状态请求。 */
+  silentAuthFailure?: boolean
+  /** 是否附带登录凭证，登录和刷新接口可关闭。 */
+  auth?: boolean
 }
 
 /**
@@ -101,6 +105,10 @@ export const http = <T>(options: HttpRequestOptions): Promise<CommonResult<T>> =
           if (data.code === 200) {
             resolve(data)
           } else if (data.code === 401) {
+            if (options.silentAuthFailure) {
+              reject(res)
+              return
+            }
             // 401错误  -> 清理用户信息，跳转到登录页
             const memberStore = useMemberStore()
             memberStore.memberLogout()

@@ -9,3 +9,10 @@ export const sendAssistantMessageAPI = (data: AssistantChatRequest) =>
     data,
     timeout: 35 * 1000,
   })
+
+export const getAssistantBusinessSummaryAPI = (type: 'orders' | 'after-sales') =>
+  http<{ type: string; total: number; items: Array<{ id: number; number: string; status: string; time: string; logistics: string }> }>({
+    method: 'POST',
+    url: '/assistant/business-summary',
+    params: { type },
+  })

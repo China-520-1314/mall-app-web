@@ -35,6 +35,7 @@ export const getBrandAttentionDetailAPI = (brandId: number) => {
     method: 'GET',
     url: '/member/attention/detail',
     params: { brandId },
+    silentAuthFailure: true,
   })
 }
 

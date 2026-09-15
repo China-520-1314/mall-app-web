@@ -4,7 +4,7 @@
       <view class="assistant-header">
         <view>
           <text class="assistant-title">Mall 智能客服</text>
-          <text class="assistant-status">在线为你解答商城问题</text>
+          <text class="assistant-status">{{ fallback ? '基础问答 · 智能服务暂不可用' : '在线为你解答商城问题' }}</text>
         </view>
         <view class="header-actions">
           <button class="icon-button" aria-label="清空对话" @click="clearMessages">清</button>
@@ -21,6 +21,12 @@
           :class="item.role"
         >
           <text class="message-bubble">{{ item.content }}</text>
+          <button v-if="item.retry" :disabled="sending" aria-label="重试问题" @click="sendMessage(item.retry, true)">重试</button>
+          <view v-if="item.actions?.length" class="action-list">
+            <button v-for="action in item.actions" :key="action.route" @click="handleAction(action)">
+              {{ action.label }}
+            </button>
+          </view>
         </view>
         <view v-if="sending" class="message-row assistant">
           <text class="message-bubble">正在查询，请稍候...</text>
@@ -57,47 +63,92 @@
 
 <script setup lang="ts">
 import { computed, nextTick, ref } from 'vue'
-import { sendAssistantMessageAPI } from '@/apis/assistant'
-import type { AssistantHistoryMessage } from '@/types/assistant'
+import { getAssistantBusinessSummaryAPI, sendAssistantMessageAPI } from '@/apis/assistant'
+import type { AssistantAction, AssistantHistoryMessage } from '@/types/assistant'
 
 const welcomeMessage = '你好，我是 Mall 智能客服。商品、订单、物流、售后或账号问题都可以问我。'
 const opened = ref(false)
 const draft = ref('')
 const sending = ref(false)
-const messages = ref<AssistantHistoryMessage[]>([
+const fallback = ref(false)
+let generation = 0
+let summaryPending = false
+type AssistantMessage = AssistantHistoryMessage & { actions?: AssistantAction[]; retry?: string }
+const messages = ref<AssistantMessage[]>([
   { role: 'assistant', content: welcomeMessage },
 ])
 const quickQuestions = ['怎么查找商品？', '在哪里查看订单？', '如何申请售后？']
 const lastMessageId = computed(() => `assistant-message-${Math.max(0, messages.value.length - 1)}`)
 
 const clearMessages = () => {
+  generation++
+  sending.value = false
   messages.value = [{ role: 'assistant', content: welcomeMessage }]
 }
 
-const sendMessage = async (question?: string) => {
+const sendMessage = async (question?: string, retry = false) => {
   const content = (question || draft.value).trim()
   if (!content || sending.value) return
 
-  const history = messages.value.slice(-8)
-  messages.value.push({ role: 'user', content })
+  if (retry) messages.value = messages.value.filter(item => !item.retry)
+  const history = messages.value.filter(item => !item.retry).slice(retry ? -9 : -8, retry ? -1 : undefined)
+    .map(({ role, content }) => ({ role, content }))
+  if (!retry) messages.value.push({ role: 'user', content })
+  const requestGeneration = generation
+  const requestToken = uni.getStorageSync('token') || ''
   draft.value = ''
   sending.value = true
   await nextTick()
 
   try {
     const result = await sendAssistantMessageAPI({ message: content, history })
+    if (requestGeneration !== generation || requestToken !== (uni.getStorageSync('token') || '')) return
+    fallback.value = !!result.data?.fallback
     messages.value.push({
       role: 'assistant',
       content: result.data?.reply || '暂时没有查到答案，请稍后再试。',
+      actions: result.data?.actions || [],
     })
-  } catch {
+  } catch (error: any) {
+    if (requestGeneration !== generation || requestToken !== (uni.getStorageSync('token') || '')) return
     messages.value.push({
       role: 'assistant',
-      content: '客服服务暂时无法连接，请检查网络后重试。',
+      content: error?.data?.message || '客服服务暂时无法连接，请检查网络后重试。',
+      retry: content,
     })
   } finally {
-    sending.value = false
+    if (requestGeneration === generation) sending.value = false
   }
+}
+
+const handleAction = (action: AssistantAction) => {
+  if (!['/pages/order/order', '/pages/order/returnList'].includes(action.route)) return
+  const token = uni.getStorageSync('token') || ''
+  if (action.requiresLogin && !token) { uni.navigateTo({ url: '/pages/public/login' }); return }
+  if (summaryPending) return
+  const type = action.route === '/pages/order/returnList' ? 'after-sales' : 'orders'
+  if (action.label === '申请售后') {
+    uni.navigateTo({ url: action.route })
+    return
+  }
+  summaryPending = true
+  getAssistantBusinessSummaryAPI(type).then((result) => {
+    if (token !== (uni.getStorageSync('token') || '')) return
+    const items = result.data?.items || []
+    const content = items.length
+      ? items.map((item) => `${item.number}：${item.status}${item.logistics ? `\n${item.logistics}` : ''}`).join('\n\n')
+      : '当前没有查询到相关记录。'
+    uni.showModal({
+      title: type === 'orders' ? '我的订单' : '售后进度',
+      content,
+      showCancel: true,
+      confirmText: '打开列表',
+      success: (result) => { if (result.confirm) uni.navigateTo({ url: action.route }) },
+    })
+  }).catch((error: any) => {
+    if (token !== (uni.getStorageSync('token') || '')) return
+    if (error?.data?.code !== 401) uni.showToast({ icon: 'none', title: '查询暂不可用，请稍后重试' })
+  }).finally(() => { summaryPending = false })
 }
 </script>
 
@@ -211,10 +262,12 @@ const sendMessage = async (question?: string) => {
 
 .message-row {
   display: flex;
+  flex-direction: column;
   margin-bottom: 20rpx;
 
   &.user {
     justify-content: flex-end;
+    align-items: flex-end;
   }
 }
 
@@ -227,6 +280,27 @@ const sendMessage = async (question?: string) => {
   font-size: 26rpx;
   line-height: 1.55;
   word-break: break-word;
+}
+
+.action-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10rpx;
+  margin-top: 10rpx;
+
+  button {
+    height: 52rpx;
+    margin: 0;
+    padding: 0 18rpx;
+    border: 1rpx solid #fa436a;
+    border-radius: 8rpx;
+    background: #fff;
+    color: #d9365a;
+    font-size: 22rpx;
+    line-height: 50rpx;
+
+    &::after { border: 0; }
+  }
 }
 
 .user .message-bubble {

@@ -14,7 +14,9 @@
       <text class="tit">手机号码</text>
       <input
         class="input"
-        type="number"
+        type="text"
+        maxlength="11"
+        inputmode="numeric"
         v-model="addressData.phoneNumber"
         placeholder="收货人手机号码"
         placeholder-class="placeholder"
@@ -186,11 +188,13 @@ const handleRegionChange = (e: { detail: { value: number[] } }) => {
 // 提交表单
 const handleConfirm = async () => {
   const data = addressData.value
+  // 输入控件在不同端可能返回带空格的字符串，提交前统一规范化。
+  data.phoneNumber = String(data.phoneNumber || '').trim()
   if (!data.name) {
     uni.showToast({ title: '请填写收货人姓名', icon: 'none' })
     return
   }
-  if (!/(^1[3|4|5|7|8][0-9]{9}$)/.test(data.phoneNumber)) {
+  if (!/^1[3-9]\d{9}$/.test(data.phoneNumber)) {
     uni.showToast({ title: '请输入正确的手机号码', icon: 'none' })
     return
   }

@@ -104,6 +104,15 @@ export const fetchAliapyStatusAPI = (params: { outTradeNo: string }) => {
   })
 }
 
+/** 创建微信Native扫码支付订单 */
+export const createWechatNativePayAPI = (orderId: number) => {
+  return http<{ codeUrl: string; orderSn: string }>({
+    method: 'POST',
+    url: '/wechatpay/native',
+    params: { orderId },
+  })
+}
+
 /** 申请售后 */
 export const createReturnApplyAPI = (data: OmsOrderReturnApplyParam) => {
   return http({

@@ -14,6 +14,7 @@ export const loginAPI = (data: LoginParam) => {
   return http<LoginResult>({
     method: 'POST',
     url: '/sso/login',
+    auth: false,
     header: {
       'content-type': 'application/x-www-form-urlencoded;charset=utf-8',
     },
@@ -45,6 +46,7 @@ export const registerAPI = (data: RegisterParam) => {
   return http({
     method: 'POST',
     url: '/sso/register',
+    auth: false,
     header: {
       'content-type': 'application/x-www-form-urlencoded;charset=utf-8',
     },

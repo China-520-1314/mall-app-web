@@ -34,7 +34,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
-import { getOrderDetailAPI, payOrderSuccessAPI } from '@/apis/order'
+import { getOrderDetailAPI, createWechatNativePayAPI } from '@/apis/order'
 import type { OmsOrderDetail } from '@/types/order'
 
 // 是否使用支付宝支付（H5端启用，通过环境变量配置）
@@ -74,8 +74,29 @@ const handleChangePayType = (type: number) => {
 
 // 确认支付
 const handleConfirmPay = async () => {
-  // ===== 原支付逻辑（H5端跳支付宝收银台），现改为点击后直接支付成功，原逻辑注释保留 =====
-  // // 条件编译：仅 H5 端生效
+  // H5 真实支付：支付宝跳转收银台；微信需在具备微信商户配置的端到端接口后启用。
+  if (payType.value === 2) {
+    try {
+      const res = await createWechatNativePayAPI(orderId.value!)
+      // Native 支付返回二维码地址；H5 环境打开地址便于扫码工具读取。
+      uni.setClipboardData({ data: res.data.codeUrl })
+      uni.showModal({ title: '微信支付二维码地址', content: res.data.codeUrl, showCancel: false })
+    } catch (e) {
+      uni.showToast({ title: '微信支付暂未配置或创建失败', icon: 'none' })
+    }
+    return
+  }
+  if (USE_ALIPAY) {
+    const apiBaseUrl = import.meta.env.VITE_API_BASE_URL
+    window.location.href = apiBaseUrl + '/alipay/webPay?outTradeNo=' + encodeURIComponent(String(orderInfo.value.orderSn)) + '&subject=' + encodeURIComponent((orderInfo.value.receiverName || 'Mall') + '的商品订单') + '&totalAmount=' + encodeURIComponent(String(orderInfo.value.payAmount || orderInfo.value.totalAmount))
+    return
+  }
+  /* 本地开发模式仅允许显式调用模拟成功接口，生产环境必须配置 VITE_USE_ALIPAY=true。 */
+  if (import.meta.env.PROD) {
+    uni.showToast({ title: '支付服务未配置', icon: 'none' })
+    return
+  }
+  // ===== 开发环境模拟支付 =====
   // if (USE_ALIPAY) {
   //   if (payType.value != 1) {
   //     uni.showToast({

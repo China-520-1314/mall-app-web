@@ -13,4 +13,11 @@ export type AssistantChatRequest = {
 export type AssistantChatResponse = {
   reply: string
   fallback: boolean
+  actions?: AssistantAction[]
+}
+
+export type AssistantAction = {
+  label: string
+  route: string
+  requiresLogin: boolean
 }

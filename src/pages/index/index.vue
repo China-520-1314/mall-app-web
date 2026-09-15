@@ -33,139 +33,49 @@
       </view>
     </view>
 
-    <!-- 头部功能区 -->
-    <view class="cate-section">
-      <view class="cate-item" @click="handleNavToTopicPage">
-        <image src="/static/temp/c3.png"></image>
-        <text>专题</text>
+    <!-- 拼多多风格快捷入口：单行展示，猜你喜欢继续位于下方 -->
+    <view class="cate-section quick-entry-section">
+      <view class="cate-item" @click="handleNavToFlashProductListPage">
+        <image src="/static/icon_flash_promotion.png"></image>
+        <text>秒杀专区</text>
       </view>
-      <view class="cate-item" @click="handleNavToTopicPage">
-        <image src="/static/temp/c5.png"></image>
-        <text>话题</text>
-      </view>
-      <view class="cate-item" @click="handleNavToRecommendBrandPage">
-        <image src="/static/temp/c6.png"></image>
-        <text>优选</text>
+      <view class="cate-item" @click="handleNavToNewProductListPage">
+        <image src="/static/icon_new_product.png"></image>
+        <text>新鲜好物</text>
       </view>
       <view class="cate-item" @click="handleNavToHotProductListPage">
+        <image src="/static/icon_hot_product.png"></image>
+        <text>人气推荐</text>
+      </view>
+      <view class="cate-item" @click="handleNavToRecommendBrandPage">
+        <image src="/static/icon_home_brand.png"></image>
+        <text>品牌直供</text>
+      </view>
+      <view class="cate-item" @click="handleNavToTopicPage">
         <image src="/static/temp/c7.png"></image>
-        <text>特惠</text>
+        <text>特惠专区</text>
       </view>
     </view>
 
-    <!-- 品牌制造商直供 -->
-    <view class="f-header m-t" @click="handleNavToRecommendBrandPage">
-      <image src="/static/icon_home_brand.png"></image>
-      <view class="tit-box">
-        <text class="tit">品牌制造商直供</text>
-        <text class="tit2">工厂直达消费者，剔除品牌溢价</text>
+    <!-- 第二排功能入口，仅展示图标和名称 -->
+    <view class="cate-section feature-entry-section">
+      <view class="cate-item" @click="handleNavToRecommendBrandPage">
+        <image src="/static/icon_home_brand.png" mode="aspectFit"></image>
+        <text>品牌制造商</text>
       </view>
-      <text class="yticon icon-you"></text>
-    </view>
-    <view class="guess-section">
-      <view
-        v-for="(item, index) in brandList"
-        :key="index"
-        class="guess-item"
-        @click="handleNavToBrandDetailPage(item)"
-      >
-        <view class="image-wrapper-brand">
-          <image :src="item.logo" mode="aspectFit"></image>
-        </view>
-        <text class="title clamp">{{ item.name }}</text>
-        <text class="title2">商品数量：{{ item.productCount }}</text>
+      <view class="cate-item" @click="handleNavToFlashProductListPage">
+        <image src="/static/icon_flash_promotion.png" mode="aspectFit"></image>
+        <text>秒杀专区</text>
+      </view>
+      <view class="cate-item" @click="handleNavToNewProductListPage">
+        <image src="/static/icon_new_product.png" mode="aspectFit"></image>
+        <text>新鲜好物</text>
+      </view>
+      <view class="cate-item" @click="handleNavToHotProductListPage">
+        <image src="/static/icon_hot_product.png" mode="aspectFit"></image>
+        <text>人气推荐</text>
       </view>
     </view>
-
-    <!-- 秒杀专区 -->
-    <view class="f-header m-t" v-if="homeFlashPromotion">
-      <image src="/static/icon_flash_promotion.png"></image>
-      <view class="tit-box">
-        <text class="tit">秒杀专区</text>
-        <text class="tit2">下一场 {{ formatTime(homeFlashPromotion?.nextStartTime) }} 开始</text>
-      </view>
-      <view class="tit-box">
-        <text class="tit2" style="text-align: right">本场结束剩余：</text>
-        <view style="text-align: right">
-          <text class="hour timer">{{ cutDownTime.endHour }}</text>
-          <text>:</text>
-          <text class="minute timer">{{ cutDownTime.endMinute }}</text>
-          <text>:</text>
-          <text class="second timer">{{ cutDownTime.endSecond }}</text>
-        </view>
-      </view>
-    </view>
-    <view class="guess-section" v-if="homeFlashPromotion">
-      <view
-        v-for="(item, index) in homeFlashPromotion.productList"
-        :key="index"
-        class="guess-item"
-        @click="handleNavToDetailPage(item)"
-      >
-        <view class="image-wrapper">
-          <image :src="item.pic" mode="aspectFill"></image>
-        </view>
-        <text class="title clamp">{{ item.name }}</text>
-        <text class="title2 clamp">{{ item.subTitle }}</text>
-        <text class="price">￥{{ item.flashPromotionPrice || item.price }}</text>
-      </view>
-    </view>
-
-    <!-- 新鲜好物 -->
-    <view class="f-header m-t" @click="handleNavToNewProductListPage">
-      <image src="/static/icon_new_product.png"></image>
-      <view class="tit-box">
-        <text class="tit">新鲜好物</text>
-        <text class="tit2">为你寻觅世间好物</text>
-      </view>
-      <text class="yticon icon-you"></text>
-    </view>
-    <view class="seckill-section">
-      <scroll-view class="floor-list" scroll-x>
-        <view class="scoll-wrapper">
-          <view
-            v-for="(item, index) in newProductList"
-            :key="index"
-            class="floor-item"
-            @click="handleNavToDetailPage(item)"
-          >
-            <image :src="item.pic" mode="aspectFill"></image>
-            <text class="title clamp">{{ item.name }}</text>
-            <text class="title2 clamp">{{ item.subTitle }}</text>
-            <text class="price">￥{{ item.price }}</text>
-          </view>
-        </view>
-      </scroll-view>
-    </view>
-
-    <!-- 人气推荐楼层 -->
-    <view class="f-header m-t" @click="handleNavToHotProductListPage">
-      <image src="/static/icon_hot_product.png"></image>
-      <view class="tit-box">
-        <text class="tit">人气推荐</text>
-        <text class="tit2">大家都赞不绝口的</text>
-      </view>
-      <text class="yticon icon-you"></text>
-    </view>
-
-    <view class="hot-section">
-      <view
-        v-for="(item, index) in hotProductList"
-        :key="index"
-        class="guess-item"
-        @click="handleNavToDetailPage(item)"
-      >
-        <view class="image-wrapper">
-          <image :src="item.pic" mode="aspectFill"></image>
-        </view>
-        <view class="txt">
-          <text class="title clamp">{{ item.name }}</text>
-          <text class="title2">{{ item.subTitle }}</text>
-          <text class="price">￥{{ item.price }}</text>
-        </view>
-      </view>
-    </view>
-
     <!-- 猜你喜欢 -->
     <view class="f-header m-t">
       <image src="/static/icon_recommend_product.png"></image>
@@ -200,6 +110,7 @@
 import { ref, computed } from 'vue'
 import {
   onLoad,
+  onShow,
   onPullDownRefresh,
   onReachBottom,
   onPageScroll,
@@ -293,6 +204,14 @@ const loadData = async () => {
 // 页面加载时执行
 onLoad(() => {
   loadData()
+})
+
+// 返回首页时刷新推荐，使新产生的浏览、收藏和购买行为及时生效。
+onShow(() => {
+  if (recommendProductList.value.length > 0) {
+    recommendPageParam.value.pageNum = 1
+    loadData()
+  }
 })
 
 // 下拉刷新时执行
@@ -391,6 +310,13 @@ const handleNavToBrandDetailPage = (item: PmsBrand) => {
 const handleNavToNewProductListPage = () => {
   uni.navigateTo({
     url: '/pages/product/newProductList',
+  })
+}
+
+// 跳转到秒杀列表页
+const handleNavToFlashProductListPage = () => {
+  uni.navigateTo({
+    url: '/pages/product/flashProductList',
   })
 }
 
@@ -644,29 +570,38 @@ page {
 /* 分类 */
 .cate-section {
   display: flex;
-  justify-content: space-around;
+  justify-content: space-between;
   align-items: center;
-  flex-wrap: wrap;
-  padding: 30rpx 22rpx;
+  flex-wrap: nowrap;
+  padding: 24rpx 18rpx 20rpx;
   background: #fff;
 
   .cate-item {
+    flex: 1 1 0;
+    min-width: 0;
     display: flex;
     flex-direction: column;
     align-items: center;
-    font-size: $font-sm + 2rpx;
+    gap: 10rpx;
+    font-size: 24rpx;
     color: $font-color-dark;
+    white-space: nowrap;
   }
 
   /* 原图标颜色太深,不想改图了,所以加了透明度 */
   image {
-    width: 88rpx;
-    height: 88rpx;
-    margin-bottom: 14rpx;
+    width: 72rpx;
+    height: 72rpx;
+    margin-bottom: 0;
     border-radius: 50%;
     opacity: 0.7;
     box-shadow: 4rpx 4rpx 20rpx rgba(250, 67, 106, 0.3);
   }
+}
+
+.quick-entry-section {
+  border-radius: 0 0 18rpx 18rpx;
+  box-shadow: 0 6rpx 18rpx rgba(0, 0, 0, 0.04);
 }
 
 .ad-1 {
@@ -681,95 +616,110 @@ page {
   }
 }
 
-/* 秒杀专区 */
-.seckill-section {
-  padding: 4rpx 30rpx 24rpx;
+/* 拼多多式单行横向楼层（品牌直供 / 秒杀 / 新鲜好物 / 人气推荐通用） */
+.row-section {
+  padding: 0 0 24rpx 30rpx;
   background: #fff;
+}
 
-  .s-header {
-    display: flex;
-    align-items: center;
-    height: 92rpx;
-    line-height: 1;
+.row-scroll {
+  width: 100%;
+  white-space: nowrap;
+}
 
-    .s-img {
-      width: 140rpx;
-      height: 30rpx;
-    }
+.row-wrapper {
+  display: inline-block;
+  padding-right: 30rpx;
+}
 
-    .tip {
-      font-size: $font-base;
-      color: $font-color-light;
-      margin: 0 20rpx 0 40rpx;
-    }
+.row-item {
+  display: inline-block;
+  vertical-align: top;
+  width: 220rpx;
+  margin-right: 20rpx;
+  white-space: normal;
 
-    .timer {
-      display: inline-block;
-      width: 40rpx;
-      height: 36rpx;
-      text-align: center;
-      line-height: 36rpx;
-      margin-right: 14rpx;
-      font-size: $font-sm + 2rpx;
-      color: #fff;
-      border-radius: 2px;
-      background: rgba(0, 0, 0, 0.8);
-    }
+  &:last-child {
+    margin-right: 0;
+  }
+}
 
-    .icon-you {
-      font-size: $font-lg;
-      color: $font-color-light;
-      flex: 1;
-      text-align: right;
-    }
+.row-image {
+  position: relative;
+  width: 220rpx;
+  height: 220rpx;
+  border-radius: 8rpx;
+  overflow: hidden;
+  background: #f7f7f7;
+
+  image {
+    width: 100%;
+    height: 100%;
   }
 
-  .floor-list {
-    white-space: nowrap;
+  &.brand {
+    height: 140rpx;
+    background: #fff;
+    border: 1rpx solid #f2f2f2;
+  }
+}
+
+.row-badge {
+  position: absolute;
+  top: 0;
+  left: 0;
+  padding: 0 12rpx;
+  height: 34rpx;
+  line-height: 34rpx;
+  font-size: $font-sm - 2rpx;
+  color: #fff;
+  border-radius: 8rpx 0 8rpx 0;
+  background: $uni-color-primary;
+
+  &.new {
+    background: #4cae4c;
   }
 
-  .scoll-wrapper {
-    display: flex;
-    align-items: flex-start;
+  &.hot {
+    background: #ff7043;
   }
+}
 
-  .floor-item {
-    display: flex;
-    flex-direction: column;
-    width: 300rpx;
-    margin-right: 20rpx;
-    font-size: $font-sm + 2rpx;
-    color: $font-color-dark;
-    line-height: 1.8;
+.row-title {
+  display: block;
+  width: 220rpx;
+  margin-top: 12rpx;
+  font-size: $font-base;
+  color: $font-color-dark;
+  line-height: 1.4;
+}
 
-    image {
-      width: 300rpx;
-      height: 300rpx;
-      border-radius: 6rpx;
-    }
+.row-desc {
+  display: block;
+  width: 220rpx;
+  font-size: $font-sm;
+  color: $font-color-light;
+  line-height: 1.6;
+}
 
-    .title {
-      font-size: $font-lg;
-      color: $font-color-dark;
-      line-height: 80rpx;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
+.row-price-box {
+  display: flex;
+  align-items: baseline;
+  margin-top: 6rpx;
+}
 
-    .title2 {
-      font-size: $font-sm;
-      color: $font-color-light;
-      line-height: 40rpx;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
+.row-price {
+  font-size: $font-base + 2rpx;
+  font-weight: bold;
+  color: $uni-color-primary;
+  line-height: 1.2;
+}
 
-    .price {
-      color: $uni-color-primary;
-    }
-  }
+.row-price-origin {
+  margin-left: 10rpx;
+  font-size: $font-sm;
+  color: $font-color-light;
+  text-decoration: line-through;
 }
 
 .f-header {
@@ -853,19 +803,6 @@ page {
     }
   }
 
-  .image-wrapper-brand {
-    width: 100%;
-    height: 150rpx;
-    border-radius: 3px;
-    overflow: hidden;
-
-    image {
-      width: 100%;
-      height: 100%;
-      opacity: 1;
-    }
-  }
-
   .title {
     font-size: $font-lg;
     color: $font-color-dark;
@@ -891,59 +828,4 @@ page {
   }
 }
 
-.hot-section {
-  display: flex;
-  flex-wrap: wrap;
-  padding: 0 30rpx;
-  background: #fff;
-
-  .guess-item {
-    display: flex;
-    flex-direction: row;
-    width: 100%;
-    padding-bottom: 40rpx;
-  }
-
-  .image-wrapper {
-    width: 30%;
-    height: 250rpx;
-    border-radius: 3px;
-    overflow: hidden;
-
-    image {
-      width: 100%;
-      height: 100%;
-      opacity: 1;
-    }
-  }
-
-  .title {
-    font-size: $font-lg;
-    color: $font-color-dark;
-    line-height: 80uprpx;
-  }
-
-  .title2 {
-    font-size: $font-sm;
-    color: $font-color-light;
-    line-height: 40rpx;
-    height: 80rpx;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    display: block;
-  }
-
-  .price {
-    font-size: $font-lg;
-    color: $uni-color-primary;
-    line-height: 80rpx;
-  }
-
-  .txt {
-    width: 70%;
-    display: flex;
-    flex-direction: column;
-    padding-left: 40rpx;
-  }
-}
 </style>

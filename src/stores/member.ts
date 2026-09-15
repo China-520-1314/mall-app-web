@@ -7,6 +7,11 @@ import { loginAPI, loginByEmailCodeAPI, getMemberInfoAPI } from '@/apis/member'
 export const useMemberStore = defineStore(
   'member',
   () => {
+    const saveToken = (tokenHead: string, token: string) => {
+      // 后端返回 tokenHead 与 token 分字段，兼容历史数据避免重复 Bearer 前缀。
+      const raw = String(token || '').trim().replace(/^(Bearer\s+)+/i, '')
+      uni.setStorageSync('token', `${String(tokenHead || 'Bearer ').trim()} ${raw}`.trim())
+    }
     // 会员信息
     const memberInfo = ref<MemberInfo>()
 
@@ -25,8 +30,7 @@ export const useMemberStore = defineStore(
 
       // 2. 拼接完整 token 并存储
       const loginData = loginRes.data
-      const token = `${loginData.tokenHead}${loginData.token}`
-      uni.setStorageSync('token', token)
+      saveToken(loginData.tokenHead, loginData.token)
       uni.setStorageSync('email', email)
       uni.removeStorageSync('password')
       uni.removeStorageSync('username')
@@ -40,8 +44,7 @@ export const useMemberStore = defineStore(
 
     const memberLoginByEmailCode = async (email: string, authCode: string) => {
       const loginRes = await loginByEmailCodeAPI({ email, authCode })
-      const token = `${loginRes.data.tokenHead}${loginRes.data.token}`
-      uni.setStorageSync('token', token)
+      saveToken(loginRes.data.tokenHead, loginRes.data.token)
       uni.setStorageSync('email', email)
       const memberRes = await getMemberInfoAPI()
       setMemberInfo(memberRes.data)
